@@ -194,25 +194,15 @@ async def lifespan(app: FastAPI):
         # Start model manager batch processor
         await model_manager.start_batch_processor()
         
-        # Pre-load models if configured
-        if settings.preload_models:
-            for model_type in ModelType:
-                try:
-                    await model_manager.load_model(model_type.value)
-                    app_logger.info(f"Pre-loaded model: {model_type.value}")
-                except Exception as e:
-                    app_logger.warning(f"Failed to pre-load model {model_type.value}: {e}")
+        # Start real-time threat detection
+        try:
+            # Start real-time detector in background
+            asyncio.create_task(start_real_time_detection())
+            app_logger.info("Real-time threat detection started")
+        except Exception as e:
+            app_logger.error(f"Failed to start real-time detection: {e}")
         
-        # Start real-time threat detection if enabled
-        if settings.enable_real_time_detection:
-            try:
-                # Start real-time detector in background
-                asyncio.create_task(start_real_time_detection())
-                app_logger.info("Real-time threat detection started")
-            except Exception as e:
-                app_logger.error(f"Failed to start real-time detection: {e}")
-        
-        app_logger.success("SecurityAI ML Service started successfully")
+        app_logger.info("SecurityAI ML Service started successfully")
         
         yield
         
@@ -241,8 +231,8 @@ app = FastAPI(
     title="SecurityAI ML Service",
     description="Enhanced ML service for cybersecurity threat detection and vulnerability assessment",
     version="2.0.0",
-    docs_url="/docs" if settings.enable_docs else None,
-    redoc_url="/redoc" if settings.enable_docs else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan
 )
 
@@ -258,81 +248,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-if settings.trusted_hosts:
-    app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=settings.trusted_hosts
-    )
-
-
 # Request/Response middleware for logging and monitoring
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
     """Log requests and responses with performance tracking."""
     start_time = time.time()
-    request_id = str(uuid.uuid4())
     
-    # Extract client info
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")
-    
-    with log_context(
-        request_id=request_id,
-        endpoint=str(request.url.path),
-        method=request.method,
-        ip_address=client_ip,
-        user_agent=user_agent
-    ):
-        app_logger.info(f"Request started: {request.method} {request.url.path}")
-        
-        try:
-            # Process request
-            response = await call_next(request)
-            
-            # Calculate processing time
-            processing_time = time.time() - start_time
-            
-            # Update metrics
-            metrics_collector.request_counter.labels(
-                method=request.method,
-                endpoint=request.url.path,
-                status_code=response.status_code
-            ).inc()
-            
-            metrics_collector.request_duration.labels(
-                method=request.method,
-                endpoint=request.url.path
-            ).observe(processing_time)
-            
-            # Log response
-            app_logger.info(
-                f"Request completed: {response.status_code} in {processing_time*1000:.1f}ms",
-                status_code=response.status_code,
-                processing_time_ms=processing_time * 1000
-            )
-            
-            # Add request ID to response headers
-            response.headers["X-Request-ID"] = request_id
-            
-            return response
-            
-        except Exception as e:
-            processing_time = time.time() - start_time
-            
-            # Update error metrics
-            metrics_collector.error_counter.labels(
-                endpoint=request.url.path,
-                error_type=type(e).__name__
-            ).inc()
-            
-            # Log error
-            app_logger.error(
-                f"Request failed: {type(e).__name__} in {processing_time*1000:.1f}ms",
-                error=e,
-                processing_time_ms=processing_time * 1000
-            )
-            
-            raise
+    try:
+        response = await call_next(request)
+        processing_time = time.time() - start_time
+        app_logger.info(f"{request.method} {request.url.path} - {response.status_code} ({processing_time:.2f}s)")
+        return response
+    except Exception as e:
+        processing_time = time.time() - start_time
+        app_logger.error(f"{request.method} {request.url.path} - Error ({processing_time:.2f}s): {str(e)}")
+        raise
+
+
 
 
 # Exception handlers

@@ -1,8 +1,8 @@
 // API URL
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
 // WebSocket URL
-export const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws'
+export const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8001/ws'
 
 // Refresh token interval (in milliseconds)
 export const REFRESH_TOKEN_INTERVAL = 15 * 60 * 1000 // 15 minutes

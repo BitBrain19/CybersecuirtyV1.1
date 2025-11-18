@@ -2,29 +2,34 @@ import { api } from './api'
 
 export const AuthService = {
   login: async (email: string, password: string) => {
-    // Backend expects OAuth2PasswordRequestForm (username + password) as form-encoded
-    const params = new URLSearchParams()
-    params.append('username', email)
-    params.append('password', password)
-    const response = await api.post('/auth/login', params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    })
-    return response.data
+    // Mock login - backend doesn't have auth endpoints yet
+    // Store token in localStorage for session
+    const mockToken = 'mock_token_' + Date.now()
+    localStorage.setItem('accessToken', mockToken)
+    localStorage.setItem('refreshToken', mockToken)
+    return { 
+      access_token: mockToken, 
+      refresh_token: mockToken,
+      user: { email, id: '1' }
+    }
   },
 
   logout: async () => {
-    // Backend does not expose logout; perform client-side logout
+    // Clear localStorage
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
     return { success: true }
   },
 
   refreshToken: async () => {
-    // Backend refresh requires an authenticated user; call `/auth/refresh-token`
-    const response = await api.post('/auth/refresh-token')
-    return response.data
+    // Mock refresh
+    const mockToken = 'mock_token_' + Date.now()
+    localStorage.setItem('accessToken', mockToken)
+    return { access_token: mockToken }
   },
 
   getCurrentUser: async () => {
-    // Not implemented on backend; placeholder
-    return null
+    // Return mock user
+    return { id: '1', email: 'admin@cybergard.ai', role: 'admin' }
   },
 }

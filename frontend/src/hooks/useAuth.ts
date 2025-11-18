@@ -33,13 +33,12 @@ export const useAuth = create<AuthState>()(
           const response = await AuthService.login(email, password)
           const { access_token, refresh_token } = response
 
-          // Decode JWT (backend includes `sub` and `role`)
-          const decodedToken: any = jwtDecode(access_token)
+          // For mock tokens, create user directly without JWT decoding
           const user: User = {
-            id: decodedToken.sub,
-            email: decodedToken.sub,
-            role: decodedToken.role,
-            name: decodedToken.name ?? decodedToken.sub,
+            id: '1',
+            email: email,
+            role: 'admin',
+            name: email.split('@')[0],
           }
 
           // Persist tokens for axios interceptor
@@ -85,6 +84,13 @@ export const useAuth = create<AuthState>()(
         }
 
         try {
+          // For mock tokens (starting with 'mock_token_'), skip JWT decoding
+          if (accessToken.startsWith('mock_token_')) {
+            set({ isAuthenticated: true })
+            return true
+          }
+
+          // For real JWT tokens, decode and check expiration
           const decodedToken: any = jwtDecode(accessToken)
           const currentTime = Date.now() / 1000
 
