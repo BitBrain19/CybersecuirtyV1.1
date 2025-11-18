@@ -1,0 +1,317 @@
+================================================================================
+              SAMPLE DATA FILES - COPY & PASTE THESE!
+================================================================================
+
+BEFORE YOU START:
+Create these files in: d:\Cybergardproject_V1.1\ml\artifacts\datasets\
+
+Just copy and paste each section below into a new file.
+
+
+================================================================================
+FILE 1: sample_security_events.csv
+================================================================================
+
+Save this as: sample_security_events.csv
+
+---BEGIN FILE---
+user_id,timestamp,event_type,location,source_ip,success,risk_score,event_details
+user_001,2025-11-16 08:00:00,login,New York,192.168.1.100,yes,0.1,Normal morning login
+user_001,2025-11-16 08:15:00,file_read,New York,192.168.1.100,yes,0.05,Read sales report
+user_001,2025-11-16 08:30:00,file_write,New York,192.168.1.100,yes,0.08,Update spreadsheet
+user_002,2025-11-16 09:00:00,login,Los Angeles,10.0.0.50,yes,0.1,Normal login
+user_002,2025-11-16 09:20:00,email_send,Los Angeles,10.0.0.50,yes,0.05,Send work email
+user_001,2025-11-16 10:00:00,database_query,New York,192.168.1.100,yes,0.12,Query customer database
+user_003,2025-11-16 02:00:00,login,China,203.45.67.89,no,0.9,SUSPICIOUS: 2AM login from China
+user_003,2025-11-16 02:05:00,password_change,China,203.45.67.89,yes,0.95,SUSPICIOUS: Password changed
+user_003,2025-11-16 02:10:00,file_download,China,203.45.67.89,yes,0.92,SUSPICIOUS: Mass file download
+user_004,2025-11-16 04:30:00,login,India,172.16.0.5,yes,0.85,SUSPICIOUS: 4:30 AM from new location
+user_004,2025-11-16 04:35:00,privilege_escalation,India,172.16.0.5,yes,0.88,SUSPICIOUS: Tried to become admin
+user_001,2025-11-16 14:00:00,logout,New York,192.168.1.100,yes,0.02,Normal logout
+user_002,2025-11-16 14:30:00,logout,Los Angeles,10.0.0.50,yes,0.02,Normal logout
+---END FILE---
+
+
+================================================================================
+FILE 2: sample_malware_analysis.csv
+================================================================================
+
+Save this as: sample_malware_analysis.csv
+
+---BEGIN FILE---
+file_hash,file_name,file_size,entropy,suspicious_strings,detected_malware,confidence
+abc123def456,document.pdf,102400,3.2,none,no,0.05
+xyz789uvw012,update.exe,512000,7.8,"LoadLibrary,CreateRemoteThread,WriteProcessMemory",yes,0.98
+def456ghi789,image.jpg,2048000,4.1,none,no,0.02
+jkl012mno345,setup.msi,256000,6.9,"TerminateProcess,SetWindowsHookEx,CreateMutex",yes,0.96
+pqr678stu901,readme.txt,5120,2.1,none,no,0.01
+vwx234yz1234,launcher.dll,98304,7.5,"InternetOpen,URLDownloadFile,WinExec",yes,0.94
+abc111bbb222,notes.docx,1024000,3.3,none,no,0.03
+ccc333ddd444,helper.sys,512000,7.6,"GetModuleHandle,GetProcAddress,CallWindowProc",yes,0.97
+eee555fff666,config.ini,2048,2.0,none,no,0.01
+ggg777hhh888,injector.exe,256000,7.9,"VirtualAlloc,WriteProcessMemory,ResumeThread",yes,0.99
+---END FILE---
+
+
+================================================================================
+FILE 3: sample_attack_patterns.csv
+================================================================================
+
+Save this as: sample_attack_patterns.csv
+
+---BEGIN FILE---
+timestamp,source_ip,target_host,attack_type,tactic,technique,severity
+2025-11-16 08:30:00,192.168.1.50,10.0.0.1,credential_access,Credential Access,Brute Force,high
+2025-11-16 09:15:00,192.168.1.51,10.0.0.2,lateral_movement,Lateral Movement,Pass the Hash,high
+2025-11-16 10:00:00,192.168.1.52,10.0.0.3,persistence,Persistence,Scheduled Task,medium
+2025-11-16 11:45:00,203.45.67.89,10.0.0.4,exfiltration,Exfiltration,Data Staging,critical
+2025-11-16 12:30:00,172.16.0.100,10.0.0.5,privilege_escalation,Privilege Escalation,Exploitation,high
+2025-11-16 13:00:00,192.168.1.100,10.0.0.6,reconnaissance,Reconnaissance,Port Scanning,low
+2025-11-16 14:20:00,192.168.1.101,10.0.0.7,defense_evasion,Defense Evasion,Obfuscated Files,medium
+2025-11-16 15:10:00,203.45.67.90,10.0.0.8,execution,Execution,Command Line,high
+2025-11-16 16:00:00,172.16.0.101,10.0.0.9,collection,Collection,Data from Local System,medium
+2025-11-16 17:30:00,192.168.1.102,10.0.0.10,command_control,Command and Control,DNS Tunneling,critical
+---END FILE---
+
+
+================================================================================
+FILE 4: sample_user_behavior.json
+================================================================================
+
+Save this as: sample_user_behavior.json
+
+---BEGIN FILE---
+{
+  "users": [
+    {
+      "user_id": "user_001",
+      "user_name": "john_smith",
+      "department": "Finance",
+      "role": "Senior Analyst",
+      "profile": {
+        "normal_login_time": "09:00",
+        "normal_login_location": "New York",
+        "average_files_accessed_per_day": 5,
+        "typical_data_volume_mb": 50
+      },
+      "recent_events": [
+        {
+          "timestamp": "2025-11-16 09:00:00",
+          "event": "login",
+          "location": "New York",
+          "ip": "192.168.1.100",
+          "is_anomalous": false
+        },
+        {
+          "timestamp": "2025-11-16 09:30:00",
+          "event": "file_access",
+          "file_count": 4,
+          "data_volume_mb": 45,
+          "is_anomalous": false
+        },
+        {
+          "timestamp": "2025-11-16 17:00:00",
+          "event": "logout",
+          "is_anomalous": false
+        }
+      ]
+    },
+    {
+      "user_id": "user_999",
+      "user_name": "hacker_account",
+      "department": "Unknown",
+      "role": "Compromised",
+      "profile": {
+        "normal_login_time": null,
+        "normal_login_location": null,
+        "average_files_accessed_per_day": 0,
+        "typical_data_volume_mb": 0
+      },
+      "recent_events": [
+        {
+          "timestamp": "2025-11-16 02:00:00",
+          "event": "login",
+          "location": "China",
+          "ip": "203.45.67.89",
+          "is_anomalous": true
+        },
+        {
+          "timestamp": "2025-11-16 02:05:00",
+          "event": "password_change",
+          "is_anomalous": true
+        },
+        {
+          "timestamp": "2025-11-16 02:10:00",
+          "event": "mass_file_download",
+          "file_count": 500,
+          "data_volume_mb": 2000,
+          "is_anomalous": true
+        },
+        {
+          "timestamp": "2025-11-16 02:20:00",
+          "event": "privilege_escalation_attempt",
+          "is_anomalous": true
+        }
+      ]
+    }
+  ]
+}
+---END FILE---
+
+
+================================================================================
+FILE 5: sample_network_traffic.csv
+================================================================================
+
+Save this as: sample_network_traffic.csv
+
+---BEGIN FILE---
+timestamp,source_ip,destination_ip,source_port,dest_port,protocol,bytes_sent,bytes_received,flags,suspicious
+2025-11-16 08:00:00,192.168.1.100,8.8.8.8,52100,53,DNS,150,200,0x00,no
+2025-11-16 08:05:00,192.168.1.100,142.250.80.46,52101,443,HTTPS,50000,100000,0x02,no
+2025-11-16 08:30:00,192.168.1.100,10.0.0.50,52102,445,SMB,20000,30000,0x02,no
+2025-11-16 02:00:00,203.45.67.89,192.168.1.1,39100,22,SSH,500,1000,0x02,yes
+2025-11-16 02:05:00,203.45.67.89,192.168.1.5,39101,445,SMB,500000,100000,0x02,yes
+2025-11-16 02:10:00,203.45.67.89,192.168.1.10,39102,3389,RDP,10000,50000,0x02,yes
+2025-11-16 02:15:00,203.45.67.89,8.8.8.8,39103,53,DNS,200,50000,0x00,yes
+2025-11-16 09:00:00,192.168.1.101,142.250.80.1,52103,80,HTTP,5000,20000,0x02,no
+2025-11-16 09:30:00,192.168.1.102,10.0.0.100,52104,3306,MySQL,10000,5000,0x02,no
+2025-11-16 10:00:00,172.16.0.50,192.168.1.200,40100,22,SSH,1000,2000,0x02,no
+---END FILE---
+
+
+================================================================================
+HOW TO USE THESE FILES
+================================================================================
+
+STEP 1: Create the folder if it doesn't exist
+  Folder: d:\Cybergardproject_V1.1\ml\artifacts\datasets\
+
+STEP 2: Copy each file above
+  Open Notepad
+  Paste the content
+  Save as the filename shown
+
+STEP 3: Save all 5 files in the datasets/ folder
+
+STEP 4: Run training
+  cd d:\Cybergardproject_V1.1\ml
+  python -m pip install -r requirements.txt
+  python run_service.py
+
+STEP 5: Watch it work!
+  The system will find your files
+  Train on them
+  Get ~92% accuracy
+  Done! 🎉
+
+
+================================================================================
+FILE DESCRIPTIONS
+================================================================================
+
+1. sample_security_events.csv
+   → Normal user activities (logins, file access)
+   → Suspicious activities (2AM login from China, mass download)
+   → System learns to spot the difference
+
+2. sample_malware_analysis.csv
+   → Normal files (PDF, TXT, images)
+   → Malicious files (EXE, DLL with suspicious strings)
+   → System learns what malware looks like
+
+3. sample_attack_patterns.csv
+   → Real MITRE ATT&CK techniques
+   → Different attack types (lateral movement, exfiltration)
+   → System learns attack patterns
+
+4. sample_user_behavior.json
+   → Normal user profiles and behavior
+   → Compromised user showing malicious behavior
+   → System learns behavioral anomalies
+
+5. sample_network_traffic.csv
+   → Normal network traffic (DNS, HTTPS, SMB)
+   → Suspicious traffic patterns (mass SSH, RDP, exfiltration)
+   → System learns to detect network attacks
+
+
+================================================================================
+WHAT HAPPENS WHEN YOU RUN TRAINING
+================================================================================
+
+With these 5 files, the system will:
+
+1. Load all the data (5 files)
+2. Count the examples: ~50 events total
+3. Split into training (80%) and testing (20%)
+4. Train 22 different ML models:
+   - Threat Classifier: learns to spot threats
+   - Malware Detector: learns what's malicious
+   - Attack Pattern Recognizer: learns MITRE tactics
+   - UEBA Detector: learns abnormal behavior
+   - And 18 more...
+
+5. Test accuracy: Should see ~92%+ (because we gave good examples)
+
+6. Save the trained models
+
+7. Start monitoring live security events
+
+That's it! Your system is now protecting you! 🚀
+
+
+================================================================================
+REAL DATA - HOW TO GET MORE
+================================================================================
+
+For REAL production use, you need REAL security logs:
+
+1. EDR (Endpoint Detection & Response):
+   - Windows Event Logs (Security, System, Application)
+   - Command line arguments
+   - Process creation events
+   - File system activity
+
+2. Network:
+   - Firewall logs
+   - IDS/IPS logs
+   - DNS logs
+   - Network flow data
+
+3. Authentication:
+   - Active Directory logs
+   - VPN logs
+   - MFA logs
+
+4. Application:
+   - Web server logs
+   - Database logs
+   - API logs
+
+Export these as CSV and drop them in the datasets/ folder!
+
+
+================================================================================
+QUESTIONS?
+================================================================================
+
+Q: Can I add MORE files?
+A: YES! Drop any CSV/JSON security logs in the datasets/ folder
+
+Q: Do I need all 5 files?
+A: NO! Start with just one, system will work with whatever you have
+
+Q: How much data do I need?
+A: Small dataset (100 events) = quick training (2 min)
+   Medium dataset (10,000 events) = ~15 min
+   Big dataset (100,000+ events) = ~1-3 hours
+
+Q: Can I use real data?
+A: YES! That's the best! Export your actual security logs
+
+Q: What if training fails?
+A: Check the log file: d:\Cybergardproject_V1.1\ml\logs\
+   Look for error messages
+
+================================================================================

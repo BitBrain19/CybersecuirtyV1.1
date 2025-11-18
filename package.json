@@ -1,0 +1,30 @@
+{
+  "name": "securityai",
+  "version": "1.0.0",
+  "description": "Enterprise IT infrastructure monitoring and threat detection platform",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "start:frontend": "cd frontend && npm start",
+    "build:frontend": "cd frontend && npm run build",
+    "test:frontend": "cd frontend && npm test",
+    "start:backend": "cd backend && python -m uvicorn app.main:app --reload",
+    "test:backend": "cd backend && pytest",
+    "start:dev": "docker-compose up",
+    "lint": "npm run lint:frontend",
+    "lint:frontend": "cd frontend && npm run lint"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "concurrently": "^8.0.1",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.2"
+  }
+}
