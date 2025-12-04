@@ -4,6 +4,7 @@ import Card from "@/components/Card";
 import DataTable from "@/components/DataTable";
 import Modal from "@/components/Modal";
 import { useToast } from "@/hooks/useToast";
+import mlService from "@/services/mlService";
 
 interface Playbook {
   id: string;
@@ -40,19 +41,10 @@ const SOAR: React.FC = () => {
     const fetchPlaybooks = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/soar/playbooks`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
-        );
-
-        if (!response.ok) throw new Error("Failed to fetch playbooks");
-
-        const data = await response.json();
-        setPlaybooks(data.playbooks || []);
+        const data = await mlService.getSOARPlaybooks();
+        // Map backend response to frontend interface if needed
+        // Assuming backend returns list of playbooks directly or wrapped
+        setPlaybooks(data || []);
         success("Playbooks loaded successfully");
       } catch (err) {
         error(err instanceof Error ? err.message : "Failed to load playbooks");
@@ -66,22 +58,30 @@ const SOAR: React.FC = () => {
 
   const handleRunPlaybook = async (playbook: Playbook) => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/soar/playbooks/${playbook.id}/run`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        }
-      );
+      // Create a dummy incident context for manual run
+      const incidentContext = {
+        incident_id: `MANUAL-${Date.now()}`,
+        incident_type: playbook.trigger_type,
+        severity: "medium",
+        affected_hosts: ["MANUAL_TEST_HOST"],
+        affected_users: ["admin"],
+        evidence_count: 1
+      };
 
-      if (!response.ok) throw new Error("Failed to run playbook");
+      const result = await mlService.runSOARPlaybook(playbook.id, incidentContext);
 
-      const data = await response.json();
-      setExecutions([data, ...executions]);
+      // Add to executions list (mocking the execution record for now as backend returns result)
+      const newExecution: PlaybookExecution = {
+        id: Date.now().toString(),
+        playbook_id: playbook.id,
+        playbook_name: playbook.name,
+        status: "success", // Backend simulation returns success immediately
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        result: JSON.stringify(result)
+      };
+
+      setExecutions([newExecution, ...executions]);
       success(`Playbook "${playbook.name}" executed successfully`);
       setShowModal(false);
     } catch (err) {

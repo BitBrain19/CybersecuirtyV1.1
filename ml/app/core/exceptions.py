@@ -98,10 +98,10 @@ class SecurityAIException(Exception):
 class ModelError(SecurityAIException):
     """Errors related to ML model operations."""
     
-    def __init__(self, message: str, model_name: str = None, **kwargs):
+    def __init__(self, message: str, model_name: str = None, error_code: str = "MODEL_ERROR", **kwargs):
         super().__init__(
             message=message,
-            error_code="MODEL_ERROR",
+            error_code=error_code,
             category=ErrorCategory.MODEL_ERROR,
             **kwargs
         )

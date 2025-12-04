@@ -68,10 +68,12 @@ The platform follows a microservices architecture with four main components:
 - Redis for message broker
 
 ### ML Pipeline
-- Scikit-learn for traditional ML models
-- PyTorch for deep learning
-- MLflow for model tracking
-- ONNX for model export
+- **ModelManager**: Centralized service for loading, managing, and querying ML models.
+- **Adapter Pattern**: Standardized interface (`BaseAdapter`) for all 9 production modules, ensuring consistent input/output handling.
+- **Dynamic Loading**: `importlib`-based mechanism to load models from the `ml_models` directory at runtime.
+- **Scikit-learn**: Primary framework for Threat Classification and Anomaly Detection.
+- **NetworkX**: Graph analysis for Attack Path Prediction.
+- **MLflow**: Model versioning and registry.
 
 ### Databases
 - PostgreSQL for relational data

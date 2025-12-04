@@ -12,6 +12,7 @@ if db_url.startswith("postgresql://"):
 
 engine = create_async_engine(db_url, echo=True)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+async_session_maker = AsyncSessionLocal
 
 Base = declarative_base()
 

@@ -34,6 +34,14 @@ class LogLevel(str, Enum):
 class ModelType(str, Enum):
     """Available model types."""
     THREAT_DETECTION = "threat_detection"
+    MALWARE_DETECTION = "malware_detection"
+    ATTACK_PATH = "attack_path"
+    MITRE_MAPPING = "mitre_mapping"
+    UEBA = "ueba"
+    FEDERATED_LEARNING = "federated_learning"
+    EDR_TELEMETRY = "edr_telemetry"
+    XDR_CORRELATION = "xdr_correlation"
+    SOAR_ENGINE = "soar_engine"
     VULNERABILITY_ASSESSMENT = "vulnerability_assessment"
 
 
@@ -116,42 +124,63 @@ settings = Settings()
 MODEL_CONFIGS = {
     ModelType.THREAT_DETECTION: {
         "name": "Threat Detection Model",
-        "description": "Detects malicious activities and potential threats in network traffic and system logs",
-        "input_features": [
-            "source_ip", "destination_ip", "source_port", "destination_port",
-            "protocol", "packet_count", "byte_count", "duration",
-            "flag_syn", "flag_ack", "flag_fin", "flag_rst", "flag_psh", "flag_urg"
-        ],
-        "output_classes": ["benign", "malicious", "suspicious"],
-        "model_params": {
-            "n_estimators": 200,
-            "max_depth": 15,
-            "min_samples_split": 5,
-            "min_samples_leaf": 2,
-            "random_state": 42
-        }
+        "description": "Classifies security events into threat categories (e.g., malware, exploit, lateral movement)",
+        "module_path": "app.threat_classification.threat_classifier_prod",
+        "factory_func": "get_threat_classifier"
+    },
+    ModelType.MALWARE_DETECTION: {
+        "name": "Malware Detection Model",
+        "description": "Detects malware based on static and behavioral features",
+        "module_path": "app.malware_detection.malware_detector_prod",
+        "factory_func": "get_malware_detector"
+    },
+    ModelType.ATTACK_PATH: {
+        "name": "Attack Path Predictor",
+        "description": "Predicts potential attack paths and lateral movement risks",
+        "module_path": "app.attack_path.attack_path_predictor_prod",
+        "factory_func": "get_attack_path_predictor"
+    },
+    ModelType.MITRE_MAPPING: {
+        "name": "MITRE Technique Mapper",
+        "description": "Maps security events to MITRE ATT&CK techniques",
+        "module_path": "app.mitre_mapping.mitre_technique_mapper_prod",
+        "factory_func": "get_mitre_mapper"
+    },
+    ModelType.UEBA: {
+        "name": "UEBA Graph Detector",
+        "description": "Detects anomalous user behavior using graph analysis",
+        "module_path": "app.ueba.ueba_graph_detector_prod",
+        "factory_func": "get_ueba_detector"
+    },
+    ModelType.FEDERATED_LEARNING: {
+        "name": "Federated Learning System",
+        "description": "Privacy-preserving collaborative learning",
+        "module_path": "app.federated_learning.federated_learning_prod",
+        "factory_func": "get_federated_learning"
+    },
+    ModelType.EDR_TELEMETRY: {
+        "name": "EDR Telemetry Processor",
+        "description": "Processes endpoint telemetry for suspicious patterns",
+        "module_path": "app.edr_telemetry.edr_telemetry_processor_prod",
+        "factory_func": "get_edr_telemetry_processor"
+    },
+    ModelType.XDR_CORRELATION: {
+        "name": "XDR Correlation Engine",
+        "description": "Correlates alerts across multiple sources",
+        "module_path": "app.xdr_correlation.xdr_correlation_engine_prod",
+        "factory_func": "get_xdr_engine"
+    },
+    ModelType.SOAR_ENGINE: {
+        "name": "SOAR Orchestrator",
+        "description": "Automated incident response and playbook execution",
+        "module_path": "app.soar_engine.soar_orchestrator_prod",
+        "factory_func": "get_soar_orchestrator"
     },
     ModelType.VULNERABILITY_ASSESSMENT: {
         "name": "Vulnerability Assessment Model",
-        "description": "Assesses vulnerabilities in systems and applications, providing risk scores and severity levels",
-        "input_features": [
-            "age", "version", "patch_level", "complexity_score",
-            "os_type", "service_type", "access_vector", "authentication_required",
-            "confidentiality_impact", "integrity_impact", "availability_impact"
-        ],
-        "severity_thresholds": {
-            "critical": 9.0,
-            "high": 7.0,
-            "medium": 4.0,
-            "low": 1.0
-        },
-        "model_params": {
-            "n_estimators": 150,
-            "learning_rate": 0.1,
-            "max_depth": 8,
-            "subsample": 0.8,
-            "random_state": 42
-        }
+        "description": "Assesses vulnerabilities in systems and applications",
+        "module_path": "app.models.vulnerability_assessment",
+        "factory_func": "VulnerabilityAssessmentModel"
     }
 }
 

@@ -398,6 +398,83 @@ class PlaybookLibrary:
             PlaybookAction(action_type=ActionType.COLLECT_ARTIFACTS, confidence=0.75),
         ]
         self.playbooks["lateral"] = lateral_pb
+        
+        # 4. Phishing / Credential Compromise Response
+        phishing_pb = SecurityPlaybook(
+            name="Phishing Response",
+            description="Response to phishing or credential compromise",
+            trigger_type="phishing",
+            enabled=True,
+            priority=ActionPriority.HIGH
+        )
+        phishing_pb.actions = [
+            PlaybookAction(action_type=ActionType.DISABLE_ACCOUNT, confidence=0.95),
+            PlaybookAction(action_type=ActionType.REVOKE_SESSION, confidence=0.95),
+            PlaybookAction(action_type=ActionType.NOTIFY_SOC, confidence=1.0),
+        ]
+        self.playbooks["phishing"] = phishing_pb
+
+        # 5. Data Exfiltration Response
+        exfil_pb = SecurityPlaybook(
+            name="Data Exfiltration Response",
+            description="Response to detected data exfiltration",
+            trigger_type="exfiltration",
+            enabled=True,
+            priority=ActionPriority.CRITICAL
+        )
+        exfil_pb.actions = [
+            PlaybookAction(action_type=ActionType.BLOCK_IP, confidence=0.9),
+            PlaybookAction(action_type=ActionType.ISOLATE_HOST, confidence=0.95),
+            PlaybookAction(action_type=ActionType.DISABLE_ACCOUNT, confidence=0.85),
+            PlaybookAction(action_type=ActionType.NOTIFY_SOC, confidence=1.0),
+        ]
+        self.playbooks["exfiltration"] = exfil_pb
+
+        # 6. C2 / Botnet Response
+        c2_pb = SecurityPlaybook(
+            name="C2 Communication Response",
+            description="Response to Command & Control traffic",
+            trigger_type="c2_communication",
+            enabled=True,
+            priority=ActionPriority.CRITICAL
+        )
+        c2_pb.actions = [
+            PlaybookAction(action_type=ActionType.BLOCK_IP, confidence=0.95),
+            PlaybookAction(action_type=ActionType.KILL_PROCESS, confidence=0.9),
+            PlaybookAction(action_type=ActionType.CAPTURE_MEMORY, confidence=0.8),
+            PlaybookAction(action_type=ActionType.COLLECT_ARTIFACTS, confidence=0.8),
+        ]
+        self.playbooks["c2"] = c2_pb
+
+        # 7. Brute Force Response
+        brute_pb = SecurityPlaybook(
+            name="Brute Force Response",
+            description="Response to brute force attacks",
+            trigger_type="brute_force",
+            enabled=True,
+            priority=ActionPriority.MEDIUM
+        )
+        brute_pb.actions = [
+            PlaybookAction(action_type=ActionType.BLOCK_IP, confidence=0.9),
+            PlaybookAction(action_type=ActionType.DISABLE_ACCOUNT, confidence=0.7), # Temporary lock usually
+        ]
+        self.playbooks["brute_force"] = brute_pb
+
+        # 8. Insider Threat Response
+        insider_pb = SecurityPlaybook(
+            name="Insider Threat Response",
+            description="Response to potential insider threats",
+            trigger_type="insider_threat",
+            enabled=True,
+            priority=ActionPriority.HIGH
+        )
+        insider_pb.actions = [
+            PlaybookAction(action_type=ActionType.NOTIFY_SOC, confidence=1.0),
+            PlaybookAction(action_type=ActionType.SNAPSHOT_DISK, confidence=0.9),
+            PlaybookAction(action_type=ActionType.COLLECT_ARTIFACTS, confidence=0.85),
+            # No automated blocking for insiders usually, to avoid tipping them off or disrupting legit work
+        ]
+        self.playbooks["insider_threat"] = insider_pb
     
     def get_playbook(self, trigger_type: str) -> Optional[SecurityPlaybook]:
         """Get playbook by trigger"""

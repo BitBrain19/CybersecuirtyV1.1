@@ -4,115 +4,63 @@
 
 The SecurityAI Platform's ML service provides advanced security analytics capabilities through various machine learning components. These components work together to detect threats, assess vulnerabilities, analyze behavior, and automate responses to security incidents.
 
-## Core ML Components
+## Production ML Modules
 
-### Threat Detection Models
+The SecurityAI Platform now integrates 9 specialized production-grade ML modules:
 
-The threat detection models identify potential security threats using supervised machine learning techniques:
+### 1. Threat Classifier (`threat_classification`)
+- **Algorithm**: Random Forest Classifier
+- **Purpose**: Classifies security events into threat categories (e.g., DDoS, Phishing, Brute Force).
+- **Features**: Packet size, protocol, port analysis, payload entropy.
+- **Output**: Threat category and confidence score.
 
-- **Algorithm**: Random Forest classifier
-- **Features**: Network traffic patterns, system logs, user actions
-- **Output**: Threat classification (malicious/benign) with confidence score
-- **Use Cases**: Malware detection, intrusion detection, suspicious activity identification
+### 2. Malware Detector (`malware_detection`)
+- **Algorithm**: Isolation Forest (Anomaly Detection) + Random Forest (Classification)
+- **Purpose**: Detects malicious files and processes based on static and behavioral analysis.
+- **Features**: API call sequences, file entropy, imported DLLs, process lineage.
+- **Output**: Malicious/Benign verdict with anomaly score.
 
-### Vulnerability Assessment
+### 3. Attack Path Predictor (`attack_path`)
+- **Algorithm**: NetworkX Graph Analysis + Probabilistic Path Scoring
+- **Purpose**: Predicts potential lateral movement paths an attacker might take.
+- **Features**: Network topology, user permissions, vulnerability scores, asset criticality.
+- **Output**: Graph of compromised nodes and potential next targets.
 
-The vulnerability assessment models evaluate system vulnerabilities and provide risk scores:
+### 4. MITRE Technique Mapper (`mitre_mapping`)
+- **Algorithm**: Text Classification (TF-IDF + Random Forest)
+- **Purpose**: Maps security alerts to specific MITRE ATT&CK techniques and tactics.
+- **Features**: Alert descriptions, command lines, system calls.
+- **Output**: MITRE Technique ID (e.g., T1059) and Tactic (e.g., Execution).
 
-- **Algorithm**: Gradient Boosting regression
-- **Features**: System configurations, patch levels, known CVEs
-- **Output**: Vulnerability risk score (0-10) and severity classification
-- **Use Cases**: Security posture assessment, prioritization of remediation efforts
+### 5. UEBA Graph Detector (`ueba`)
+- **Algorithm**: Graph-based Anomaly Detection (Isolation Forest on User-Entity Graph)
+- **Purpose**: Detects insider threats and compromised accounts by analyzing behavioral deviations.
+- **Features**: Login times, access patterns, resource usage, peer group comparison.
+- **Output**: Risk score and list of anomalous activities.
 
-### Log Parsing
+### 6. Federated Learning (`federated_learning`)
+- **Algorithm**: Federated Averaging (FedAvg)
+- **Purpose**: Enables privacy-preserving model training across distributed nodes without sharing raw data.
+- **Features**: Local model weights, aggregation rounds.
+- **Output**: Global model updates.
 
-The log parsing models extract structured information from unstructured log data:
+### 7. EDR Telemetry Processor (`edr_telemetry`)
+- **Algorithm**: Process Tree Analysis + Behavioral Heuristics
+- **Purpose**: Processes raw endpoint telemetry to identify suspicious process chains and command-line obfuscation.
+- **Features**: Parent-child process relationships, command-line arguments, file modifications.
+- **Output**: Process risk profile and obfuscation detection.
 
-- **Algorithm**: DistilBERT (transformer-based NLP)
-- **Features**: Raw log text
-- **Output**: Structured log entries with extracted fields
-- **Use Cases**: Log normalization, event correlation, anomaly detection
+### 8. XDR Correlation Engine (`xdr_correlation`)
+- **Algorithm**: Temporal & Spatial Event Correlation (Clustering)
+- **Purpose**: Correlates disparate alerts from Network, Endpoint, and Cloud into unified "Incidents".
+- **Features**: Time windows, IP/User overlap, attack stage progression.
+- **Output**: Correlated Incident ID and root cause analysis.
 
-### Lateral Movement Detection
-
-The lateral movement detection models identify potential attacker movement within the network:
-
-- **Algorithm**: NetworkX graph analysis with custom heuristics
-- **Features**: Network connections, authentication events, process executions
-- **Output**: Potential lateral movement paths with risk scores
-- **Use Cases**: Advanced persistent threat detection, privilege escalation identification
-
-## Advanced Security Analytics
-
-### User and Entity Behavior Analytics (UEBA)
-
-The UEBA component establishes behavioral baselines and detects anomalies:
-
-- **Implementation**: `behavior_analytics.py` in the `ueba` module
-- **Key Classes**:
-  - `EntityProfile`: Maintains behavioral baseline for users and systems
-  - `BehaviorAnalyzer`: Analyzes current behavior against established baselines
-  - `AnomalyDetector`: Identifies deviations from normal behavior patterns
-  - `RiskScoreCalculator`: Computes risk scores based on anomaly severity
-
-- **Features**:
-  - Multi-dimensional behavioral profiling
-  - Temporal pattern analysis
-  - Peer group comparison
-  - Risk scoring and prioritization
-
-### Security Orchestration, Automation and Response (SOAR)
-
-The SOAR component automates incident response with customizable workflows:
-
-- **Implementation**: Multiple files in the `soar` module
-- **Key Components**:
-  - `workflow_engine.py`: Core workflow execution engine
-  - `actions.py`: Predefined response actions
-  - `conditions.py`: Conditional logic for workflows
-  - `playbooks.py`: Preconfigured response playbooks
-
-- **Features**:
-  - Workflow definition and execution
-  - Playbook management
-  - Automated response actions
-  - Case management
-  - Incident response coordination
-
-### Endpoint Detection and Response (EDR)
-
-The EDR component monitors endpoints for suspicious activities and provides response capabilities:
-
-- **Implementation**: Multiple files in the `edr` module
-- **Key Components**:
-  - `agent.py`: Endpoint agent implementation
-  - `manager.py`: Centralized EDR management
-  - `integration.py`: Integration with other security components
-
-- **Features**:
-  - Endpoint monitoring and telemetry
-  - Process and file system activity tracking
-  - Network connection monitoring
-  - Behavioral analysis
-  - Threat detection and response
-  - Endpoint isolation capabilities
-
-### Extended Detection and Response (XDR)
-
-The XDR component integrates security data across multiple sources for unified threat detection:
-
-- **Implementation**: Multiple files in the `xdr` module
-- **Key Components**:
-  - `xdr_platform.py`: Core XDR platform implementation
-  - `integrations.py`: Integration with external security systems
-
-- **Features**:
-  - Unified data collection
-  - Cross-component correlation
-  - Integrated threat detection
-  - Coordinated response
-  - Centralized visibility
-  - Advanced threat hunting
+### 9. SOAR Orchestrator (`soar_engine`)
+- **Algorithm**: Gradient Boosting (Action Ranking) + Rule-based Playbooks
+- **Purpose**: Automates incident response by selecting and executing the best response playbook.
+- **Features**: Incident type, severity, affected assets, historical success rates.
+- **Output**: Recommended Playbook (e.g., "Isolate Host", "Disable User") and execution status.
 
 ## Model Management
 

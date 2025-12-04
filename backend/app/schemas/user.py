@@ -1,5 +1,7 @@
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr
+
 
 
 # Shared properties
@@ -31,5 +33,5 @@ class UserResponse(UserBase):
 
 # Additional properties to return via API
 class UserDetail(UserResponse):
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime

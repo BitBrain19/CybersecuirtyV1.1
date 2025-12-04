@@ -182,8 +182,21 @@ kubectl apply -f manifests/backend/ -n securityai
 
 #### Step 4: Deploy ML Services
 
+**Important**: The ML service requires the `ml_models` directory to be populated with the 9 production modules. Ensure your Persistent Volume Claim (PVC) is correctly bound and populated, or use an `initContainer` to download the latest models from the Model Registry.
+
 ```bash
 kubectl apply -f manifests/ml/ -n securityai
+```
+
+**Example InitContainer Configuration:**
+```yaml
+initContainers:
+  - name: download-models
+    image: securityai/model-downloader:latest
+    command: ["python", "download_models.py", "--all"]
+    volumeMounts:
+      - name: model-volume
+        mountPath: /app/ml_models
 ```
 
 #### Step 5: Deploy Frontend

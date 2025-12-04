@@ -126,25 +126,31 @@ Access your user profile from the top-right corner of the interface to:
 
 ### Using UEBA (User and Entity Behavior Analytics)
 
-1. Navigate to the **Analytics** section and select **UEBA**
-2. View the list of entities with anomaly scores
-3. Select an entity to view its behavioral profile
-4. Review detected anomalies and their context
-5. Investigate unusual patterns through timeline analysis
-6. Adjust baseline settings if needed (admin users only)
+1. Navigate to the **UEBA** dashboard from the main menu.
+2. View the **User Risk Dashboard** to see high-risk users ranked by anomaly score.
+3. Click on a user to view their **Behavioral Profile**, including:
+   - Login time anomalies
+   - Unusual resource access
+   - Peer group deviations
+4. Analyze the **Risk Score History** to identify trends.
+5. Review specific **Anomalies** (e.g., "Impossible Travel", "Data Exfiltration") with detailed context.
 
 ### Working with SOAR Playbooks
 
-1. Navigate to the **Configuration** section and select **SOAR**
-2. Browse available playbooks for automated response
-3. View playbook details including:
-   - Trigger conditions
-   - Action sequence
-   - Required approvals
-   - Expected outcomes
-4. Execute a playbook manually if needed
-5. Review playbook execution history
-6. Request new playbooks for common scenarios
+1. Navigate to the **SOAR** dashboard.
+2. View the list of **Available Playbooks** (e.g., Phishing Response, Ransomware Containment).
+3. **Manual Execution**: Select a playbook and click "Run" to execute it against a specific incident.
+4. **Automated Execution**: Configure triggers to automatically run playbooks when specific alert conditions are met.
+5. Monitor **Active Executions** in real-time to see step-by-step progress.
+6. Review **Execution History** for audit and compliance purposes.
+
+### Visualizing Attack Paths
+
+1. Navigate to the **Attack Paths** dashboard.
+2. View the **Attack Graph** to visualize potential lateral movement paths.
+3. Identify **Critical Assets** that are at risk of compromise.
+4. Analyze **Choke Points** where defensive actions would be most effective.
+5. Simulate **Attack Scenarios** to test the resilience of your network.
 
 ### Exploring EDR Capabilities
 

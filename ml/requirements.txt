@@ -13,12 +13,12 @@ joblib==1.2.0
 
 # Deep Learning & Neural Networks
 tensorflow==2.13.0
-keras==2.13.0
+# keras==2.13.0
 pytorch-lightning==2.0.4
 
 # Explainability & Interpretability
 shap==0.42.1
-lime==0.2.0
+lime
 networkx==3.1
 
 # Security & Analysis
@@ -26,7 +26,7 @@ yara-python==4.3.1
 pefile==2023.2.7
 
 # Threat Intelligence
-misp-lib==1.4.163
+# misp-lib==1.4.163
 pymisp==2.4.179
 requests==2.31.0
 
@@ -53,6 +53,7 @@ python-dotenv==1.0.0
 celery==5.3.1
 tqdm==4.65.0
 loguru==0.7.0
+structlog
 
 # Testing
 pytest==7.3.1

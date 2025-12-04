@@ -287,26 +287,58 @@ class ModelManager:
         model_version: str
     ) -> Any:
         """Load model from storage (file system, S3, etc.)."""
+        import importlib
+        from app.core.adapters import ADAPTER_MAP
+        
         model_type = ModelType(model_name)
-        model_factory = self._model_factories.get(model_type)
+        config = MODEL_CONFIGS.get(model_type)
         
-        if not model_factory:
-            raise ModelNotFoundError(model_name)
+        if not config:
+            raise ModelNotFoundError(f"Configuration not found for {model_name}")
             
-        # Construct model path
-        model_path = os.path.join(
-            settings.model_storage_path,
-            f"{model_name}_{model_version}.joblib"
-        )
-        
-        # Load in thread pool to avoid blocking
-        loop = asyncio.get_event_loop()
-        model = await loop.run_in_executor(
-            self.executor,
-            lambda: model_factory(model_path if os.path.exists(model_path) else None)
-        )
-        
-        return model
+        try:
+            # Dynamic import of production module
+            module_path = config.get("module_path")
+            factory_func_name = config.get("factory_func")
+            
+            if module_path and factory_func_name:
+                # Import module
+                module = importlib.import_module(module_path)
+                
+                # Get factory function
+                factory = getattr(module, factory_func_name)
+                
+                # Create model instance
+                # Some factories might be async, handle if needed (assuming sync for now based on code)
+                if asyncio.iscoroutinefunction(factory):
+                    model_instance = await factory()
+                else:
+                    model_instance = factory()
+                    
+                # Wrap in adapter
+                adapter_class = ADAPTER_MAP.get(model_type)
+                if adapter_class:
+                    return adapter_class(model_instance)
+                else:
+                    logger.warning(f"No adapter found for {model_name}, returning raw instance")
+                    return model_instance
+            
+            # Fallback for legacy models (VulnerabilityAssessment)
+            elif model_type == ModelType.VULNERABILITY_ASSESSMENT:
+                from app.models.vulnerability_assessment import VulnerabilityAssessmentModel
+                model_instance = VulnerabilityAssessmentModel()
+                adapter_class = ADAPTER_MAP.get(model_type)
+                return adapter_class(model_instance)
+                
+            else:
+                raise ModelNotFoundError(f"Invalid configuration for {model_name}")
+                
+        except ImportError as e:
+            logger.error(f"Failed to import module for {model_name}: {e}")
+            raise ModelLoadError(model_name, f"Import failed: {e}")
+        except Exception as e:
+            logger.error(f"Failed to load model {model_name}: {e}")
+            raise ModelLoadError(model_name, str(e))
         
     def _estimate_model_memory(self, model: Any) -> float:
         """Estimate model memory usage in MB."""
@@ -345,15 +377,17 @@ class ModelManager:
             with metrics_collector.track_prediction(model_name):
                 prediction_start = time.time()
                 
+                # Use adapter interface
                 if hasattr(model, 'predict'):
-                    if model_name == ModelType.THREAT_DETECTION.value:
-                        prediction, confidence = model.predict(features)
-                    elif model_name == ModelType.VULNERABILITY_ASSESSMENT.value:
-                        score, severity = model.predict(features)
-                        prediction = severity
-                        confidence = score / 10.0  # Normalize to 0-1
+                    # Adapters return a dict with prediction details
+                    result_data = await model.predict(features)
+                    
+                    # Extract standard fields if present, or use whole result
+                    if isinstance(result_data, dict):
+                        prediction = result_data.get("prediction", result_data)
+                        confidence = result_data.get("confidence")
                     else:
-                        prediction = model.predict(features)
+                        prediction = result_data
                         confidence = None
                 else:
                     raise PredictionError(

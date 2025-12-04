@@ -471,29 +471,64 @@ Retrieve a list of vulnerabilities.
 
 ### Threat Detection
 
-#### Predict Threat
+#### Predict Threat (Unified Endpoint)
 
 ```
 POST /v1/ml/predict
 ```
 
-Analyze data for potential threats using machine learning models.
+Analyze data using a specific machine learning model. This is the unified entry point for all ML capabilities.
 
 **Request Body:**
 
 ```json
 {
-  "data": {
-    "source_ip": "192.168.1.100",
-    "destination_ip": "203.0.113.10",
-    "destination_port": 445,
-    "protocol": "tcp",
-    "bytes_sent": 1024,
-    "bytes_received": 8192,
-    "duration": 5.2,
-    "timestamp": "2023-05-01T12:00:00Z"
-  },
-  "model_id": "threat-detection-v2"
+  "model_name": "string",  // Required. One of: threat_classification, malware_detection, attack_path, mitre_mapping, ueba, federated_learning, edr_telemetry, xdr_correlation, soar_engine
+  "features": {            // Required. Dynamic schema based on model_name
+    "operation": "string", // Optional. Specific operation for complex models (e.g., 'get_graph', 'list_playbooks')
+    ...
+  }
+}
+```
+
+**Examples:**
+
+**1. Threat Classification:**
+```json
+{
+  "model_name": "threat_classification",
+  "features": {
+    "packet_size": 1500,
+    "protocol": "TCP",
+    "port": 443,
+    "payload_entropy": 5.2
+  }
+}
+```
+
+**2. Attack Path Prediction:**
+```json
+{
+  "model_name": "attack_path",
+  "features": {
+    "operation": "get_graph"
+  }
+}
+```
+
+**3. SOAR Playbook Execution:**
+```json
+{
+  "model_name": "soar_engine",
+  "features": {
+    "operation": "execute_playbook",
+    "playbook_id": "pb_isolate_host_01",
+    "incident_context": {
+      "incident_id": "inc-123",
+      "severity": "critical",
+      "affected_hosts": ["192.168.1.10"]
+    }
+  }
 }
 ```
 
@@ -501,23 +536,18 @@ Analyze data for potential threats using machine learning models.
 
 ```json
 {
-  "data": {
-    "prediction": {
-      "is_threat": true,
-      "confidence": 0.92,
-      "threat_type": "lateral_movement",
-      "explanation": {
-        "feature_importance": {
-          "destination_port": 0.45,
-          "bytes_received": 0.30,
-          "protocol": 0.15,
-          "duration": 0.10
-        }
-      }
-    },
-    "model_id": "threat-detection-v2",
-    "model_version": "2.3.0",
-    "processing_time": 0.023
+  "prediction": {
+    // Dynamic schema based on model output
+    "threat_type": "DDoS",
+    "confidence": 0.98
+    // OR
+    "graph": { "nodes": [...], "edges": [...] }
+    // OR
+    "status": "executed", "actions_taken": [...]
+  },
+  "model_info": {
+    "name": "threat_classification",
+    "version": "1.0.0"
   }
 }
 ```

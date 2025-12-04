@@ -35,6 +35,7 @@ tenacity==8.2.2
 # Testing
 pytest==7.3.1
 httpx==0.24.1
+prometheus-fastapi-instrumentator
 
 # ML Integration
 numpy==1.24.3

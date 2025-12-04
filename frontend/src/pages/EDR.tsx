@@ -3,6 +3,7 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 import DataTable from "@/components/DataTable";
 import { useToast } from "@/hooks/useToast";
+import mlService from "@/services/mlService";
 
 interface Endpoint {
   id: string;
@@ -35,24 +36,15 @@ const EDR: React.FC = () => {
   );
   const { success, error } = useToast();
 
+
+
   // Fetch endpoints
   useEffect(() => {
     const fetchEndpoints = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/edr/endpoints`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
-        );
-
-        if (!response.ok) throw new Error("Failed to fetch endpoints");
-
-        const data = await response.json();
-        setEndpoints(data.endpoints || []);
+        const data = await mlService.getEndpoints();
+        setEndpoints(data || []);
         success("Endpoints loaded");
       } catch (err) {
         error(err instanceof Error ? err.message : "Failed to load endpoints");
@@ -68,22 +60,8 @@ const EDR: React.FC = () => {
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
-        const endpoint = selectedEndpoint
-          ? `${import.meta.env.VITE_API_URL}/edr/alerts?endpoint_id=${
-              selectedEndpoint.id
-            }`
-          : `${import.meta.env.VITE_API_URL}/edr/alerts`;
-
-        const response = await fetch(endpoint, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
-
-        if (!response.ok) throw new Error("Failed to fetch alerts");
-
-        const data = await response.json();
-        setAlerts(data.alerts || []);
+        const data = await mlService.getEDRAlerts(selectedEndpoint?.id);
+        setAlerts(data || []);
       } catch (err) {
         error(err instanceof Error ? err.message : "Failed to load alerts");
       }

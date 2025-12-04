@@ -237,6 +237,114 @@ const mlService = {
       },
     };
   },
+
+  /**
+   * Get Attack Paths Graph
+   */
+  getAttackPaths: async (): Promise<any> => {
+    try {
+      // Use the generic predict endpoint with model_name="attack_path"
+      const response = await api.post("/ml/predict", {
+        model_name: "attack_path",
+        features: { operation: "get_graph" }
+      });
+      // The backend wraps the result in a PredictionOutput object
+      return response.data.prediction;
+    } catch (error) {
+      console.error("Error fetching attack paths:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get SOAR Playbooks
+   */
+  getSOARPlaybooks: async (): Promise<any[]> => {
+    try {
+      const response = await api.post("/ml/predict", {
+        model_name: "soar_engine",
+        features: { operation: "list_playbooks" }
+      });
+      return response.data.prediction.playbooks || [];
+    } catch (error) {
+      console.error("Error fetching SOAR playbooks:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Run SOAR Playbook
+   */
+  runSOARPlaybook: async (playbookId: string, incidentContext: any): Promise<any> => {
+    try {
+      const response = await api.post("/ml/predict", {
+        model_name: "soar_engine",
+        features: { 
+          operation: "execute_playbook",
+          playbook_id: playbookId,
+          incident_context: incidentContext
+        }
+      });
+      return response.data.prediction;
+    } catch (error) {
+      console.error("Error running SOAR playbook:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get UEBA Anomalies
+   */
+  getUEBAAnomalies: async (timeRange: string = "24h"): Promise<any[]> => {
+    try {
+      const response = await api.post("/ml/predict", {
+        model_name: "ueba",
+        features: { 
+          operation: "get_anomalies",
+          time_range: timeRange
+        }
+      });
+      return response.data.prediction.anomalies || [];
+    } catch (error) {
+      console.error("Error fetching UEBA anomalies:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get EDR Endpoints
+   */
+  getEndpoints: async (): Promise<any[]> => {
+    try {
+      const response = await api.post("/ml/predict", {
+        model_name: "edr_telemetry",
+        features: { operation: "list_endpoints" }
+      });
+      return response.data.prediction.endpoints || [];
+    } catch (error) {
+      console.error("Error fetching endpoints:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get EDR Alerts
+   */
+  getEDRAlerts: async (endpointId?: string): Promise<any[]> => {
+    try {
+      const response = await api.post("/ml/predict", {
+        model_name: "edr_telemetry",
+        features: { 
+          operation: "list_alerts",
+          endpoint_id: endpointId 
+        }
+      });
+      return response.data.prediction.alerts || [];
+    } catch (error) {
+      console.error("Error fetching EDR alerts:", error);
+      throw error;
+    }
+  }
 };
 
 export default mlService;

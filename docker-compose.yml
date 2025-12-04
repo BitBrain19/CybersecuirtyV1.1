@@ -1,28 +1,11 @@
 version: '3.8'
 
 services:
-  # Frontend
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-      - VITE_API_URL=http://localhost:8000/api/v1
-      - VITE_WS_URL=ws://localhost:8000/ws
-    depends_on:
-      - backend
-
   # Backend API
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
@@ -46,7 +29,7 @@ services:
   ml_service:
     build:
       context: ./ml
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     volumes:
       - ./ml:/app
     environment:
@@ -63,7 +46,7 @@ services:
   celery_worker:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     command: celery -A app.worker worker --loglevel=info
     volumes:
       - ./backend:/app
@@ -79,7 +62,7 @@ services:
   celery_beat:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     command: celery -A app.worker beat --loglevel=info
     volumes:
       - ./backend:/app
@@ -140,7 +123,9 @@ services:
 
   # MLflow
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.3.1
+    build:
+      context: ./infra/mlflow
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
     command: mlflow server --host 0.0.0.0 --backend-store-uri postgresql://postgres:postgres@postgres:5432/securityai --default-artifact-root /mlflow/artifacts

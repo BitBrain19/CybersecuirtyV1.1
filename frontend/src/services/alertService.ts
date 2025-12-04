@@ -120,7 +120,9 @@ const alertService = {
 
   acknowledgeAlert: async (id: string): Promise<Alert> => {
     try {
-      const response = await api.put(`/alerts/${id}/acknowledge`);
+      // Backend doesn't have specific acknowledge endpoint, treating as resolve for now or just logging
+      // For strict alignment, we'll use the resolve endpoint with a note
+      const response = await api.post(`/alerts/${id}/resolve`, { notes: "Acknowledged via UI" });
       return response.data;
     } catch (error) {
       console.error(`Error acknowledging alert with ID ${id}:`, error);
@@ -130,7 +132,8 @@ const alertService = {
 
   resolveAlert: async (id: string, notes?: string): Promise<Alert> => {
     try {
-      const response = await api.put(`/alerts/${id}/resolve`, { notes });
+      // Backend uses POST for resolve
+      const response = await api.post(`/alerts/${id}/resolve`, { notes });
       return response.data;
     } catch (error) {
       console.error(`Error resolving alert with ID ${id}:`, error);
@@ -140,7 +143,8 @@ const alertService = {
 
   dismissAlert: async (id: string, reason?: string): Promise<Alert> => {
     try {
-      const response = await api.put(`/alerts/${id}/dismiss`, { reason });
+      // Backend doesn't have specific dismiss endpoint, treating as resolve
+      const response = await api.post(`/alerts/${id}/resolve`, { notes: `Dismissed: ${reason}` });
       return response.data;
     } catch (error) {
       console.error(`Error dismissing alert with ID ${id}:`, error);

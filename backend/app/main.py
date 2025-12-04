@@ -12,6 +12,9 @@ app = FastAPI(
     version="0.1.0",
 )
 
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)
+
 # Set up CORS middleware
 # Set explicit CORS origins to cover common localhost variants (including Vite on 3001)
 cors_origins = [
