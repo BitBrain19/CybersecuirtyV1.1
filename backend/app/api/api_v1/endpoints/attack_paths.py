@@ -1,96 +1,174 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+import logging
+import uuid
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
+from pydantic import BaseModel
 
 from app.core.auth import get_current_user
+from app.models.user import User
+from app.services.ml_client import ml_client
 
-
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# ==================== Pydantic Models ====================
 
-# Simple placeholder schemas (dicts) to avoid adding Pydantic models yet
-def sample_attack_paths() -> List[dict]:
-    return [
-        {
-            "id": 1,
-            "name": "Workstation → DB via App Server",
-            "severity": "high",
-            "nodeCount": 5,
-            "edgeCount": 4,
-            "status": "open",
-            "discoveredAt": "2024-11-01T10:30:00Z",
-        },
-        {
-            "id": 2,
-            "name": "Phishing → Priv Esc → Domain Admin",
-            "severity": "critical",
-            "nodeCount": 7,
-            "edgeCount": 6,
-            "status": "open",
-            "discoveredAt": "2024-11-03T08:12:00Z",
-        },
-        {
-            "id": 3,
-            "name": "Public Service → Misconfig → Internal API",
-            "severity": "medium",
-            "nodeCount": 4,
-            "edgeCount": 3,
-            "status": "acknowledged",
-            "discoveredAt": "2024-11-05T14:50:00Z",
-        },
-    ]
+class AttackPathRequest(BaseModel):
+    source_node: str
+    target_node: str
+    context: Optional[Dict[str, Any]] = None
+
+class AttackPathStep(BaseModel):
+    step_id: str
+    description: str
+    technique: Optional[str] = None
+
+class AttackPath(BaseModel):
+    id: str
+    name: str
+    source: str
+    target: str
+    steps: List[str]
+    risk_score: float
+    probability: float
+    status: str = "open"
+    discovered_at: datetime = datetime.now()
+
+class SimulationResponse(BaseModel):
+    simulation_id: str
+    paths_found: int
+    top_path: Optional[AttackPath] = None
+    message: str
+
+# ==================== Endpoints ====================
+
+@router.get("/", response_model=List[AttackPath])
+async def get_attack_paths(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get a list of potential attack paths.
+    
+    Currently triggers a real-time analysis for critical assets.
+    """
+    # In a real system, this would fetch from a DB of previously discovered paths.
+    # For this remediation, we will query the ML model for a default critical path
+    # to demonstrate connectivity.
+    
+    try:
+        # Example: Check path from Internet to Database
+        result = await ml_client.predict(
+            model_name="attack_path",
+            features={
+                "source_node": "internet_gateway",
+                "target_node": "production_database",
+                "scan_mode": "quick"
+            }
+        )
+        
+        paths = []
+        if result and result.get("paths"):
+            for idx, p in enumerate(result["paths"]):
+                paths.append(AttackPath(
+                    id=f"path-{idx}",
+                    name=f"Internet to DB Path {idx+1}",
+                    source="internet_gateway",
+                    target="production_database",
+                    steps=p.get("steps", []),
+                    risk_score=p.get("risk_score", 0.0),
+                    probability=p.get("probability", 0.0),
+                    status="open",
+                    discovered_at=datetime.now()
+                ))
+        
+        return paths
+
+    except Exception as e:
+        logger.error(f"Failed to fetch attack paths: {e}")
+        # Return empty list instead of erroring out completely if ML is down, 
+        # but log the error.
+        return []
 
 
-@router.get("/", response_model=List[dict])
-def get_attack_paths(current_user: dict = Depends(get_current_user)):
-    """Return a list of attack paths. Placeholder implementation."""
-    return sample_attack_paths()
+@router.post("/simulate", response_model=SimulationResponse)
+async def simulate_attack_path(
+    request: AttackPathRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Simulate an attack path between two nodes using the ML model.
+    """
+    simulation_id = str(uuid.uuid4())
+    
+    try:
+        logger.info(f"Starting attack path simulation {simulation_id}: {request.source_node} -> {request.target_node}")
+        
+        result = await ml_client.predict(
+            model_name="attack_path",
+            features={
+                "source_node": request.source_node,
+                "target_node": request.target_node,
+                "context": request.context or {}
+            },
+            request_id=simulation_id
+        )
+        
+        paths_found = result.get("paths_found", 0)
+        top_path = None
+        
+        if paths_found > 0 and result.get("paths"):
+            first_path = result["paths"][0]
+            top_path = AttackPath(
+                id=f"sim-{simulation_id}",
+                name=f"Simulated: {request.source_node} to {request.target_node}",
+                source=request.source_node,
+                target=request.target_node,
+                steps=first_path.get("steps", []),
+                risk_score=first_path.get("risk_score", 0.0),
+                probability=first_path.get("probability", 0.0)
+            )
+            
+        return SimulationResponse(
+            simulation_id=simulation_id,
+            paths_found=paths_found,
+            top_path=top_path,
+            message="Simulation completed successfully"
+        )
 
-
-@router.get("/{attack_path_id}", response_model=dict)
-def get_attack_path_by_id(attack_path_id: int, current_user: dict = Depends(get_current_user)):
-    """Return a single attack path by id. Placeholder implementation."""
-    paths = sample_attack_paths()
-    for p in paths:
-        if p["id"] == attack_path_id:
-            return p
-    raise HTTPException(status_code=404, detail="Attack path not found")
-
-
-@router.get("/statistics", response_model=dict)
-def get_attack_path_statistics(current_user: dict = Depends(get_current_user)):
-    """Return basic statistics for attack paths. Placeholder implementation."""
-    paths = sample_attack_paths()
-    total = len(paths)
-    severities = {}
-    for p in paths:
-        severities[p["severity"]] = severities.get(p["severity"], 0) + 1
-    return {"total": total, "bySeverity": severities}
+    except Exception as e:
+        logger.error(f"Simulation failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Simulation failed: {str(e)}"
+        )
 
 
 @router.get("/mitre-techniques", response_model=List[dict])
-def get_mitre_techniques(current_user: dict = Depends(get_current_user)):
-    """Return a placeholder list of MITRE ATT&CK techniques involved."""
-    return [
-        {"id": "T1059", "name": "Command and Scripting Interpreter"},
-        {"id": "T1068", "name": "Exploitation for Privilege Escalation"},
-        {"id": "T1078", "name": "Valid Accounts"},
-    ]
+async def get_mitre_techniques(current_user: User = Depends(get_current_user)):
+    """
+    Get MITRE techniques from the ML model (MITRE Mapper).
+    """
+    try:
+        # Use the MITRE Mapping model to get a list of relevant techniques
+        # We pass a dummy event to get general techniques or a specific query if supported
+        result = await ml_client.predict(
+            model_name="mitre_mapping",
+            features={
+                "event_type": "discovery",
+                "description": "list_all_techniques" 
+            }
+        )
+        
+        # Transform result to list
+        techniques = []
+        if result and result.get("techniques"):
+            for t_id in result["techniques"]:
+                techniques.append({"id": t_id, "name": "Technique " + t_id}) # Name might need lookup
+                
+        return techniques or [{"id": "T0000", "name": "No techniques found"}]
 
-
-@router.post("/simulate", response_model=dict)
-def simulate_attack_path(current_user: dict = Depends(get_current_user)):
-    """Simulate an attack path. Placeholder implementation."""
-    return {"status": "ok", "message": "Simulation queued"}
-
-
-@router.patch("/{attack_path_id}/status", response_model=dict)
-def update_attack_path_status(
-    attack_path_id: int,
-    status: Optional[str] = None,
-    current_user: dict = Depends(get_current_user),
-):
-    """Update an attack path status. Placeholder implementation."""
-    if status not in {None, "open", "acknowledged", "dismissed", "resolved"}:
-        raise HTTPException(status_code=400, detail="Invalid status")
-    return {"id": attack_path_id, "status": status or "open"}
+    except Exception as e:
+        logger.error(f"Failed to get MITRE techniques: {e}")
+        return []

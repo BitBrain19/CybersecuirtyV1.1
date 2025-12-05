@@ -43,6 +43,7 @@ class ModelType(str, Enum):
     XDR_CORRELATION = "xdr_correlation"
     SOAR_ENGINE = "soar_engine"
     VULNERABILITY_ASSESSMENT = "vulnerability_assessment"
+    COMPLIANCE = "compliance"
 
 
 class Settings(BaseSettings):
@@ -181,8 +182,15 @@ MODEL_CONFIGS = {
         "description": "Assesses vulnerabilities in systems and applications",
         "module_path": "app.models.vulnerability_assessment",
         "factory_func": "VulnerabilityAssessmentModel"
+    },
+    ModelType.COMPLIANCE: {
+        "name": "Compliance Assessment Model",
+        "description": "Assesses system compliance against standards",
+        "module_path": "app.compliance.compliance_model",
+        "factory_func": "get_compliance_model"
     }
 }
+
 
 
 # Performance thresholds

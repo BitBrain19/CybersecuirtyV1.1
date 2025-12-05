@@ -12,18 +12,21 @@ import { AttackPathSeverity } from '@/types';
 import { formatDate, getSeverityColor } from '@/utils/helpers';
 import NetworkLogo from '@/assets/network.svg';
 
-// Define types locally for now if missing
+// Updated interface to match backend response
 interface AttackPath {
   id: string;
   name: string;
-  description: string;
-  severity: string;
-  discoveredAt?: string;
-  created_at?: string;
-  nodeCount: number;
-  edgeCount: number;
-  nodes: any[];
-  edges: any[];
+  source: string;
+  target: string;
+  steps: string[];
+  risk_score: number;
+  probability: number;
+  status: string;
+  discovered_at: string;
+  // Derived fields for UI
+  description?: string;
+  severity?: string;
+  nodeCount?: number;
 }
 
 const AttackPaths: React.FC = () => {
@@ -39,12 +42,21 @@ const AttackPaths: React.FC = () => {
       try {
         setLoading(true);
         const data = await mlService.getAttackPaths();
-        // Backend returns a single graph or list of paths. 
-        // Adapting to list format for UI
+        // Backend returns a list of paths directly now
         const paths = Array.isArray(data) ? data : [data];
         
+        // Map backend data to UI format if needed
+        const mappedPaths = paths.map((p: any) => ({
+          ...p,
+          description: p.description || `Path from ${p.source} to ${p.target}`,
+          severity: (p.risk_score || 0) > 0.8 ? 'critical' : (p.risk_score || 0) > 0.6 ? 'high' : 'medium',
+          nodeCount: p.steps ? p.steps.length : 0,
+          discoveredAt: p.discovered_at,
+          risk_score: p.risk_score || 0
+        }));
+
         // Filter data client-side based on severity and search query
-        const filteredData = paths.filter((path: any) => {
+        const filteredData = mappedPaths.filter((path: any) => {
           const matchesSeverity = severityFilter === 'all' || path.severity === severityFilter;
           const matchesSearch = !searchQuery || 
             (path.name && path.name.toLowerCase().includes(searchQuery.toLowerCase())) || 
@@ -153,17 +165,17 @@ const AttackPaths: React.FC = () => {
                     </defs>
                     {/* Placeholder Nodes - in real app would calculate layout */}
                     <circle cx="100" cy="300" r="20" fill="#ef4444" />
-                    <text x="100" y="340" textAnchor="middle" fill="white" fontSize="12">Attacker</text>
+                    <text x="100" y="340" textAnchor="middle" fill="white" fontSize="12">{filteredAttackPaths[0].source}</text>
                     
                     <line x1="120" y1="300" x2="380" y2="300" stroke="#64748b" strokeWidth="2" markerEnd="url(#arrowhead)" />
                     
                     <circle cx="400" cy="300" r="20" fill="#3b82f6" />
-                    <text x="400" y="340" textAnchor="middle" fill="white" fontSize="12">Compromised Host</text>
+                    <text x="400" y="340" textAnchor="middle" fill="white" fontSize="12">Step 1</text>
                     
                     <line x1="420" y1="300" x2="680" y2="300" stroke="#64748b" strokeWidth="2" markerEnd="url(#arrowhead)" />
                     
                     <circle cx="700" cy="300" r="20" fill="#22c55e" />
-                    <text x="700" y="340" textAnchor="middle" fill="white" fontSize="12">Target DB</text>
+                    <text x="700" y="340" textAnchor="middle" fill="white" fontSize="12">{filteredAttackPaths[0].target}</text>
                   </svg>
                 </div>
               ) : (
@@ -214,13 +226,13 @@ const AttackPaths: React.FC = () => {
                         <p className="text-sm text-muted-foreground mb-2">{path.description}</p>
                         <div className="flex flex-wrap gap-2 mt-2">
                           <div className="text-xs text-muted-foreground">
-                            <span className="font-semibold">Discovered:</span> {path.discoveredAt ? formatDate(path.discoveredAt) : formatDate(path.created_at)}
+                            <span className="font-semibold">Discovered:</span> {path.discovered_at ? formatDate(path.discovered_at) : 'N/A'}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             <span className="font-semibold">Nodes:</span> {path.nodeCount}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            <span className="font-semibold">Edges:</span> {path.edgeCount}
+                            <span className="font-semibold">Risk Score:</span> {(path.risk_score || 0).toFixed(2)}
                           </div>
                         </div>
                         <div className="flex space-x-2 mt-4">

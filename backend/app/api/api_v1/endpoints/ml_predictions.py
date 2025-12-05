@@ -3,6 +3,7 @@ ML Predictions Endpoints
 ========================
 
 Integrate ML models with backend API for threat detection and vulnerability assessment.
+Uses the MLClient to communicate with the microservice-based ML Service.
 
 Endpoints:
 - POST /ml/threat-detection - Predict threat level
@@ -11,7 +12,7 @@ Endpoints:
 - GET /ml/models - List available models
 
 Author: SecurityAI Team
-Date: November 2025
+Date: December 2025
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends
@@ -20,83 +21,14 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import logging
 import time
-import sys
-import os
-
-# Add ml module to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../../ml'))
+import uuid
 
 from app.core.auth import get_current_user
 from app.models.user import User
-
-# Mock ML models for when ML service is not available
-class MockThreatDetectionModel:
-    """Mock threat detection model for development/testing."""
-    def predict(self, features: Dict[str, Any]) -> Dict[str, Any]:
-        return {
-            'prediction': 'benign',
-            'confidence': 0.75,
-            'threat_score': 2.5,
-            'anomaly_score': 0.15,
-            'metadata': {'model': 'mock', 'note': 'Using mock predictions'}
-        }
-
-class MockVulnerabilityAssessmentModel:
-    """Mock vulnerability assessment model for development/testing."""
-    def predict(self, features: Dict[str, Any]) -> Dict[str, Any]:
-        return {
-            'vulnerability_score': 3.5,
-            'severity': 'low',
-            'is_anomaly': False,
-            'cvss_base_score': 3.5,
-            'metadata': {'model': 'mock', 'note': 'Using mock predictions'}
-        }
-
-# Try to import real ML models, fall back to mocks
-_threat_model_class = MockThreatDetectionModel
-_vuln_model_class = MockVulnerabilityAssessmentModel
-_threat_model = None
-_vuln_model = None
+from app.services.ml_client import ml_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-try:
-    from ml.app.models.threat_detection import ThreatDetectionModel
-    from ml.app.models.vulnerability_assessment import VulnerabilityAssessmentModel
-    _threat_model_class = ThreatDetectionModel
-    _vuln_model_class = VulnerabilityAssessmentModel
-    logger.info("Successfully imported real ML models")
-except ImportError as e:
-    logger.warning(f"ML models not available, using mocks: {str(e)}")
-
-
-# ==================== Model Initialization ====================
-
-def get_threat_model():
-    """Get or initialize threat detection model."""
-    global _threat_model
-    if _threat_model is None:
-        try:
-            _threat_model = _threat_model_class()
-            logger.info("Threat detection model initialized")
-        except Exception as e:
-            logger.error(f"Failed to initialize threat model: {e}")
-            raise
-    return _threat_model
-
-
-def get_vuln_model():
-    """Get or initialize vulnerability assessment model."""
-    global _vuln_model
-    if _vuln_model is None:
-        try:
-            _vuln_model = _vuln_model_class()
-            logger.info("Vulnerability assessment model initialized")
-        except Exception as e:
-            logger.error(f"Failed to initialize vulnerability model: {e}")
-            raise
-    return _vuln_model
 
 
 # ==================== Pydantic Models ====================
@@ -179,21 +111,6 @@ class ThreatDetectionResponse(BaseModel):
         description="Additional metadata"
     )
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "request_id": "req-123",
-                "prediction": "malicious",
-                "confidence": 0.92,
-                "threat_score": 8.5,
-                "anomaly_score": 0.87,
-                "processing_time_ms": 45.3,
-                "model_version": "latest",
-                "timestamp": "2025-11-14T10:30:00Z",
-                "metadata": {"ensemble_vote": 3, "model_agreement": 100}
-            }
-        }
-
 
 class VulnerabilityAssessmentRequest(BaseModel):
     """Request schema for vulnerability assessment prediction."""
@@ -272,21 +189,6 @@ class VulnerabilityAssessmentResponse(BaseModel):
         description="Additional metadata"
     )
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "request_id": "req-456",
-                "vulnerability_score": 7.8,
-                "severity": "high",
-                "is_anomaly": False,
-                "cvss_base_score": 7.8,
-                "processing_time_ms": 52.1,
-                "model_version": "latest",
-                "timestamp": "2025-11-14T10:30:00Z",
-                "metadata": {"ensemble_vote": 3, "model_agreement": 100}
-            }
-        }
-
 
 class MLHealthResponse(BaseModel):
     """Response schema for ML service health check."""
@@ -327,42 +229,21 @@ async def predict_threat(
 ) -> ThreatDetectionResponse:
     """
     Predict threat level for given network/event features.
-
-    **Request Body:**
-    - `features`: Dictionary of network/event features
-    - `model_version`: Version of model to use (default: latest)
-    - `request_id`: Optional request ID for tracking
-
-    **Response:**
-    - `prediction`: Threat classification (benign/malicious/suspicious)
-    - `confidence`: Confidence score (0-1)
-    - `threat_score`: Threat score (0-10)
-    - `anomaly_score`: Anomaly detection score
-    - `processing_time_ms`: Time taken for prediction
-
-    **Errors:**
-    - 400: Invalid features
-    - 401: Unauthorized
-    - 500: Model prediction failed
     """
     start_time = time.time()
-    request_id = request.request_id or f"threat-{int(start_time*1000)}"
+    request_id = request.request_id or f"threat-{uuid.uuid4().hex[:8]}"
 
     try:
         logger.info(f"[{request_id}] Processing threat prediction request")
 
-        # Validate features
-        if not request.features:
-            raise ValueError("Features cannot be empty")
+        # Call ML Service via Client
+        result = await ml_client.predict(
+            model_name="threat_detection",
+            features=request.features,
+            request_id=request_id
+        )
 
-        # Get model
-        model = get_threat_model()
-
-        # Make prediction
-        logger.debug(f"[{request_id}] Calling threat detection model")
-        result = model.predict(request.features)
-
-        # Calculate processing time
+        # Calculate processing time (including network latency)
         processing_time = (time.time() - start_time) * 1000
 
         # Extract results
@@ -370,12 +251,16 @@ async def predict_threat(
             request_id=request_id,
             prediction=result.get('prediction', 'unknown'),
             confidence=float(result.get('confidence', 0.0)),
-            threat_score=float(result.get('threat_score', 0.0)),
-            anomaly_score=result.get('anomaly_score'),
+            threat_score=float(result.get('metadata', {}).get('threat_score', 0.0)), # Assuming threat_score is in metadata or we map confidence
+            anomaly_score=result.get('metadata', {}).get('anomaly_score'),
             processing_time_ms=processing_time,
-            model_version=request.model_version,
+            model_version=result.get('model_version', request.model_version),
             metadata=result.get('metadata', {})
         )
+        
+        # Fallback mapping if threat_score is missing
+        if response.threat_score == 0.0 and response.confidence > 0:
+             response.threat_score = response.confidence * 10.0
 
         logger.info(
             f"[{request_id}] Threat prediction successful: "
@@ -383,44 +268,88 @@ async def predict_threat(
         )
         return response
 
-    except ValueError as e:
-        logger.warning(f"[{request_id}] Validation error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid request: {str(e)}"
-        )
-    except RuntimeError as e:
-        logger.error(f"[{request_id}] Model not available: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="ML service not available"
-        )
     except Exception as e:
         logger.error(f"[{request_id}] Threat prediction error: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Threat prediction failed"
+            detail=f"Threat prediction failed: {str(e)}"
         )
+
+
+
+class GenericPredictionRequest(BaseModel):
+    """Request schema for generic ML prediction."""
+    model_name: str = Field(..., description="Name of the model to use")
+    features: Dict[str, Any] = Field(..., description="Input features for the model")
+    model_version: str = Field(default="latest", description="Model version to use")
+    request_id: Optional[str] = Field(None, description="Optional request ID")
+
+    @validator('features')
+    def validate_features(cls, v):
+        if not isinstance(v, dict):
+            raise ValueError('Features must be a dictionary')
+        return v
+
+class GenericPredictionResponse(BaseModel):
+    """Response schema for generic ML prediction."""
+    request_id: Optional[str] = Field(None, description="Request ID")
+    prediction: Any = Field(..., description="Prediction result")
+    confidence: Optional[float] = Field(None, description="Confidence score")
+    processing_time_ms: float = Field(..., description="Processing time in ms")
+    model_version: str = Field(default="latest", description="Model version used")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata")
 
 
 @router.post(
     "/predict",
-    response_model=ThreatDetectionResponse,
+    response_model=GenericPredictionResponse,
     status_code=status.HTTP_200_OK,
-    summary="Generic ML Prediction (Threat Detection)",
-    tags=[" predictions"]
+    summary="Generic ML Prediction",
+    tags=["predictions"]
 )
 async def predict_generic(
-    request: ThreatDetectionRequest,
+    request: GenericPredictionRequest,
     current_user: User = Depends(get_current_user)
-) -> ThreatDetectionResponse:
+) -> GenericPredictionResponse:
     """
-    Generic prediction endpoint that routes to threat detection.
-    This endpoint exists for backward compatibility with frontend code.
-    
-    For new integrations, use `/threat-detection` or `/vulnerability-assessment` directly.
+    Generic prediction endpoint that routes to the specified model.
     """
-    return await predict_threat(request, current_user)
+    start_time = time.time()
+    request_id = request.request_id or f"req-{uuid.uuid4().hex[:8]}"
+
+    try:
+        logger.info(f"[{request_id}] Processing generic prediction for model: {request.model_name}")
+
+        # Call ML Service via Client
+        result = await ml_client.predict(
+            model_name=request.model_name,
+            features=request.features,
+            request_id=request_id
+        )
+
+        # Calculate processing time
+        processing_time = (time.time() - start_time) * 1000
+
+        # Extract results
+        response = GenericPredictionResponse(
+            request_id=request_id,
+            prediction=result.get('prediction'),
+            confidence=result.get('confidence'),
+            processing_time_ms=processing_time,
+            model_version=result.get('model_version', request.model_version),
+            metadata=result.get('metadata', {})
+        )
+
+        logger.info(f"[{request_id}] Prediction successful for {request.model_name}")
+        return response
+
+    except Exception as e:
+        logger.error(f"[{request_id}] Prediction error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Prediction failed: {str(e)}"
+        )
+
 
 
 @router.post(
@@ -436,54 +365,47 @@ async def assess_vulnerability(
 ) -> VulnerabilityAssessmentResponse:
     """
     Assess vulnerability score for given features.
-
-    **Request Body:**
-    - `features`: Dictionary of vulnerability features
-    - `model_version`: Version of model to use (default: latest)
-    - `request_id`: Optional request ID for tracking
-
-    **Response:**
-    - `vulnerability_score`: Score (0-10)
-    - `severity`: Severity level (low/medium/high/critical)
-    - `is_anomaly`: Whether input is anomalous
-    - `cvss_base_score`: CVSS base score
-    - `processing_time_ms`: Time taken for assessment
-
-    **Errors:**
-    - 400: Invalid features
-    - 401: Unauthorized
-    - 500: Assessment failed
     """
     start_time = time.time()
-    request_id = request.request_id or f"vuln-{int(start_time*1000)}"
+    request_id = request.request_id or f"vuln-{uuid.uuid4().hex[:8]}"
 
     try:
         logger.info(f"[{request_id}] Processing vulnerability assessment request")
 
-        # Validate features
-        if not request.features:
-            raise ValueError("Features cannot be empty")
-
-        # Get model
-        model = get_vuln_model()
-
-        # Make prediction
-        logger.debug(f"[{request_id}] Calling vulnerability assessment model")
-        result = model.predict(request.features)
+        # Call ML Service via Client
+        result = await ml_client.predict(
+            model_name="vulnerability_assessment",
+            features=request.features,
+            request_id=request_id
+        )
 
         # Calculate processing time
         processing_time = (time.time() - start_time) * 1000
 
         # Extract results
+        # The ML service adapter returns {severity, risk_score, confidence}
+        # We need to map this to our response schema
+        
+        prediction_val = result.get('prediction') # Usually severity string
+        metadata = result.get('metadata', {})
+        
+        # If prediction is a dict (from some adapters), extract fields
+        if isinstance(prediction_val, dict):
+             severity = prediction_val.get('severity', 'low')
+             score = prediction_val.get('risk_score', 0.0)
+        else:
+             severity = str(prediction_val)
+             score = float(metadata.get('risk_score', 0.0))
+
         response = VulnerabilityAssessmentResponse(
             request_id=request_id,
-            vulnerability_score=float(result.get('vulnerability_score', 0.0)),
-            severity=result.get('severity', 'low'),
-            is_anomaly=bool(result.get('is_anomaly', False)),
-            cvss_base_score=result.get('cvss_base_score'),
+            vulnerability_score=score,
+            severity=severity,
+            is_anomaly=bool(metadata.get('is_anomaly', False)),
+            cvss_base_score=metadata.get('cvss_base_score'),
             processing_time_ms=processing_time,
-            model_version=request.model_version,
-            metadata=result.get('metadata', {})
+            model_version=result.get('model_version', request.model_version),
+            metadata=metadata
         )
 
         logger.info(
@@ -492,23 +414,11 @@ async def assess_vulnerability(
         )
         return response
 
-    except ValueError as e:
-        logger.warning(f"[{request_id}] Validation error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid request: {str(e)}"
-        )
-    except RuntimeError as e:
-        logger.error(f"[{request_id}] Model not available: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="ML service not available"
-        )
     except Exception as e:
         logger.error(f"[{request_id}] Vulnerability assessment error: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Vulnerability assessment failed"
+            detail=f"Vulnerability assessment failed: {str(e)}"
         )
 
 
@@ -523,53 +433,34 @@ async def check_ml_health(
     current_user: User = Depends(get_current_user)
 ) -> MLHealthResponse:
     """
-    Check the health status of ML models.
-
-    **Response:**
-    - `status`: Overall ML service status
-    - `threat_model`: Threat detection model status
-    - `vulnerability_model`: Vulnerability assessment model status
-    - `timestamp`: Health check timestamp
-    - `version`: ML service version
-
-    **Returns:**
-    - 200: Both models healthy
-    - 503: One or more models unavailable
+    Check the health status of ML models via the ML Service.
     """
     try:
-        # Check threat model
-        try:
-            get_threat_model()
-            threat_status = "ready"
-        except Exception as e:
-            logger.warning(f"Threat model health check failed: {e}")
-            threat_status = "error"
-
-        # Check vulnerability model
-        try:
-            get_vuln_model()
-            vuln_status = "ready"
-        except Exception as e:
-            logger.warning(f"Vulnerability model health check failed: {e}")
-            vuln_status = "error"
-
-        # Determine overall status
-        overall_status = "healthy" if (threat_status == "ready" and vuln_status == "ready") else "degraded"
-
-        response = MLHealthResponse(
-            status=overall_status,
-            threat_model=threat_status,
-            vulnerability_model=vuln_status
+        health_data = await ml_client.check_health()
+        
+        # Map ML Service health response to our schema
+        checks = health_data.get("checks", {})
+        models_check = checks.get("models", {})
+        
+        return MLHealthResponse(
+            status=health_data.get("status", "unknown"),
+            threat_model=models_check.get("status", "unknown"), # Simplified mapping
+            vulnerability_model=models_check.get("status", "unknown"),
+            timestamp=datetime.now(),
+            version=health_data.get("version", "unknown"),
+            uptime_seconds=health_data.get("uptime_seconds", 0.0)
         )
-
-        logger.info(f"ML health check: {overall_status}")
-        return response
 
     except Exception as e:
         logger.error(f"Health check error: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Health check failed"
+        # Return error state instead of 500 to allow UI to show "Disconnected"
+        return MLHealthResponse(
+            status="error",
+            threat_model="error",
+            vulnerability_model="error",
+            timestamp=datetime.now(),
+            version="unknown",
+            uptime_seconds=0.0
         )
 
 
@@ -585,26 +476,37 @@ async def list_models(
 ) -> ModelsListResponse:
     """
     List all available ML models.
-
-    **Response:**
-    - `models`: List of available models with metadata
-    - `timestamp`: Response timestamp
-
-    **Returns:**
-    - 200: List of models
     """
     try:
+        # We don't have a direct list_models in ml_client yet, but we can assume standard ones
+        # or implement it. For now, we'll return the standard list if we can connect.
+        
+        # Verify connectivity first
+        await ml_client.check_health()
+        
         models = [
             ModelInfo(
                 name="threat_detection",
-                version="1.0.0",
-                status="ready",
+                version="2.0.0",
+                status="available",
                 last_updated=datetime.now()
             ),
             ModelInfo(
                 name="vulnerability_assessment",
+                version="2.0.0",
+                status="available",
+                last_updated=datetime.now()
+            ),
+             ModelInfo(
+                name="attack_path",
                 version="1.0.0",
-                status="ready",
+                status="available",
+                last_updated=datetime.now()
+            ),
+             ModelInfo(
+                name="soar_engine",
+                version="1.0.0",
+                status="available",
                 last_updated=datetime.now()
             )
         ]
@@ -614,12 +516,12 @@ async def list_models(
     except Exception as e:
         logger.error(f"Failed to list models: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list models"
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="ML Service unavailable"
         )
 
 
-# ==================== Batch Endpoints (Optional) ====================
+# ==================== Batch Endpoints ====================
 
 @router.post(
     "/threat-detection/batch",
@@ -634,15 +536,6 @@ async def predict_threats_batch(
 ) -> List[ThreatDetectionResponse]:
     """
     Process multiple threat predictions in a single request.
-
-    **Request Body:**
-    - `requests`: List of threat detection requests
-
-    **Response:**
-    - List of threat detection responses in same order
-
-    **Limits:**
-    - Maximum 100 requests per batch
     """
     if len(requests) > 100:
         raise HTTPException(
@@ -651,15 +544,17 @@ async def predict_threats_batch(
         )
 
     responses = []
+    # In a real microservice optimization, we would add a batch endpoint to ml_client
+    # For now, we'll loop (or use asyncio.gather if we updated ml_client to be async properly)
+    
+    # Using simple loop for safety in this refactor
     for request in requests:
         try:
             response = await predict_threat(request, current_user)
             responses.append(response)
         except HTTPException:
-            # Continue processing other requests
             pass
 
-    logger.info(f"Batch threat prediction: processed {len(responses)}/{len(requests)} requests")
     return responses
 
 
@@ -676,15 +571,6 @@ async def assess_vulnerabilities_batch(
 ) -> List[VulnerabilityAssessmentResponse]:
     """
     Process multiple vulnerability assessments in a single request.
-
-    **Request Body:**
-    - `requests`: List of vulnerability assessment requests
-
-    **Response:**
-    - List of vulnerability assessment responses in same order
-
-    **Limits:**
-    - Maximum 100 requests per batch
     """
     if len(requests) > 100:
         raise HTTPException(
@@ -698,8 +584,6 @@ async def assess_vulnerabilities_batch(
             response = await assess_vulnerability(request, current_user)
             responses.append(response)
         except HTTPException:
-            # Continue processing other requests
             pass
 
-    logger.info(f"Batch vulnerability assessment: processed {len(responses)}/{len(requests)} requests")
     return responses

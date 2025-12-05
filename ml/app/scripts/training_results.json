@@ -1,0 +1,9 @@
+{
+  "threat_detection_model_path": "/app/artifacts/saved/threat_detection_latest.joblib",
+  "vulnerability_assessment_model_path": "/app/artifacts/saved/vulnerability_assessment_latest.joblib",
+  "vulnerability_assessment_saved": true,
+  "samples": {
+    "threat_detection": 2857,
+    "vulnerability_assessment": 300
+  }
+}

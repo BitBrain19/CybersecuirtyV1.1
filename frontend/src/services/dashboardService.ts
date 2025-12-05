@@ -53,17 +53,24 @@ export interface RecentAlert {
 // Import the DashboardData type
 import { DashboardData } from '@/types/dashboard';
 
+import mlService from './mlService';
+
 const dashboardService = {
   getDashboardSummary: async (): Promise<DashboardSummary> => {
     try {
-      // Fetch stats and alerts to construct summary
-      const [statsResponse, alertsResponse] = await Promise.all([
+      // Fetch stats, alerts, compliance, and attack paths
+      const [statsResponse, alertsResponse, complianceResponse, attackPathsResponse] = await Promise.all([
         api.get('/stats'),
-        api.get('/alerts?active_only=true')
+        api.get('/alerts?active_only=true'),
+        mlService.assessCompliance('NIST'),
+        mlService.getAttackPaths()
       ]);
       
       const stats = statsResponse.data;
       const alerts = alertsResponse.data;
+      const compliance = complianceResponse;
+      // attackPathsResponse can be a list or single graph object depending on backend
+      const attackPathsCount = Array.isArray(attackPathsResponse) ? attackPathsResponse.length : (attackPathsResponse.paths ? attackPathsResponse.paths.length : 0);
       
       // Calculate metrics from real data
       const criticalAlerts = alerts.filter((a: any) => a.severity === 'critical').length;
@@ -79,9 +86,9 @@ const dashboardService = {
         low_alerts: lowAlerts,
         total_vulnerabilities: 0, // Not exposed in stats yet
         total_assets: 0, // Not exposed in stats yet
-        compliance_score: 85, // Mocked
+        compliance_score: compliance.score || 0,
         risk_score: 100 - (criticalAlerts * 10 + highAlerts * 5),
-        attack_paths: 0 // Not exposed in stats yet
+        attack_paths: attackPathsCount
       };
     } catch (error) {
       console.error('Error fetching dashboard summary:', error);
@@ -129,12 +136,30 @@ const dashboardService = {
   },
 
   getComplianceStatus: async (): Promise<ComplianceStatus[]> => {
-    // Mocking compliance
-    return [
-      { framework: 'PCI DSS', score: 92, total_controls: 120, passed_controls: 110, failed_controls: 10 },
-      { framework: 'HIPAA', score: 88, total_controls: 80, passed_controls: 70, failed_controls: 10 },
-      { framework: 'GDPR', score: 95, total_controls: 50, passed_controls: 47, failed_controls: 3 },
-    ];
+    try {
+      // Fetch real compliance data for multiple frameworks
+      const frameworks = ['PCI-DSS', 'HIPAA', 'GDPR', 'NIST'];
+      const results = await Promise.all(
+        frameworks.map(async (fw) => {
+          try {
+            const res = await mlService.assessCompliance(fw);
+            return {
+              framework: fw,
+              score: res.score,
+              total_controls: 100, // Placeholder total
+              passed_controls: res.compliant ? 100 : Math.round(res.score),
+              failed_controls: res.compliant ? 0 : 100 - Math.round(res.score)
+            };
+          } catch (e) {
+            return { framework: fw, score: 0, total_controls: 0, passed_controls: 0, failed_controls: 0 };
+          }
+        })
+      );
+      return results;
+    } catch (error) {
+      console.error('Error fetching compliance status:', error);
+      return [];
+    }
   },
 
   getTopVulnerabilities: async (limit: number = 5): Promise<TopVulnerability[]> => {

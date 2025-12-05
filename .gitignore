@@ -49,6 +49,7 @@ Thumbs.db
 mlruns/
 models/
 !backend/app/models/
+!ml/app/models/
 *.onnx
 
 # Kubernetes

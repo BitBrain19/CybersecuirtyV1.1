@@ -153,10 +153,16 @@ def generate_vulnerability_samples(n: int = 200) -> Tuple[pd.DataFrame, np.ndarr
             "os_type": os_type,
             "service_type": service_type,
             "access_vector": av,
-            "authentication_required": auth,
+            "authentication": auth,
             "confidentiality_impact": conf,
             "integrity_impact": integ,
             "availability_impact": avail,
+            "exposure_score": float(rng.uniform(0.0, 10.0)),
+            "exploitability_score": float(rng.uniform(0.0, 10.0)),
+            "impact_score": float(rng.uniform(0.0, 10.0)),
+            "cvss_base_score": float(rng.uniform(0.0, 10.0)),
+            "vulnerability_type": rng.choice(["SQLi", "XSS", "RCE", "LFI", "CSRF"]),
+            "vendor": rng.choice(["Microsoft", "Apache", "Oracle", "Cisco", "Unknown"]),
         }
 
         # Risk scoring heuristic: higher with NETWORK access, NONE auth, COMPLETE impacts,
@@ -179,34 +185,112 @@ def generate_vulnerability_samples(n: int = 200) -> Tuple[pd.DataFrame, np.ndarr
     return df, y
 
 
-def train_and_save_models():
-    """Train both models with synthetic datasets and save artifacts."""
+import argparse
+import glob
+
+def load_data_from_dir(data_dir: str, model_type: str) -> Tuple[Any, Any]:
+    """Load training data from JSONL files in the specified directory."""
+    files = glob.glob(os.path.join(data_dir, "*.jsonl"))
+    if not files:
+        print(f"No .jsonl files found in {data_dir}, using synthetic data.")
+        return None, None
+    
+    print(f"Loading data from {len(files)} files in {data_dir}...")
+    
+    all_features = []
+    all_labels = []
+    
+    for fpath in files:
+        try:
+            with open(fpath, 'r') as f:
+                for line in f:
+                    item = json.loads(line)
+                    # Simple heuristic: assume last field or specific field is label
+                    # This needs to be adapted based on actual data schema
+                    if model_type == 'threat_detection':
+                        label = item.pop('label', 'benign')
+                        all_features.append(item)
+                        all_labels.append(label)
+                    elif model_type == 'vulnerability_assessment':
+                        score = item.pop('risk_score', 0.0)
+                        # Ensure all required numerical features exist
+                        required_numerical = [
+                            'age', 'version', 'patch_level', 'complexity_score',
+                            'exposure_score', 'exploitability_score', 'impact_score',
+                            'cvss_base_score'
+                        ]
+                        for feature in required_numerical:
+                            if feature not in item:
+                                item[feature] = 0.0
+                        
+                        # Ensure all required categorical features exist
+                        required_categorical = [
+                            'os_type', 'service_type', 'access_vector', 'authentication',
+                            'vulnerability_type', 'vendor'
+                        ]
+                        for feature in required_categorical:
+                            if feature not in item:
+                                item[feature] = "Unknown"
+                        
+                        all_features.append(item)
+                        all_labels.append(score)
+        except Exception as e:
+            print(f"Error reading {fpath}: {e}")
+
+    if not all_features:
+        return None, None
+
+    if model_type == 'threat_detection':
+        model = ThreatDetectionModel()
+        X_rows = [model.preprocess(f) for f in all_features]
+        return np.vstack(X_rows), np.array(all_labels)
+    else:
+        return pd.DataFrame(all_features), np.array(all_labels)
+
+
+def train_and_save_models(data_dir: str = None, output_dir: str = None):
+    """Train both models with datasets and save artifacts."""
     start = time.time()
+    
+    # Resolve storage directory
+    if output_dir:
+        storage_dir = output_dir
+    else:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        storage_dir = os.path.join(repo_root, "models", "saved")
+    
+    os.makedirs(storage_dir, exist_ok=True)
 
     # Threat Detection
-    X_td, y_td = generate_threat_samples(n=1200)
+    print("Training Threat Detection Model...")
+    X_td, y_td = None, None
+    if data_dir:
+        X_td, y_td = load_data_from_dir(os.path.join(data_dir, "threat_detection"), "threat_detection")
+    
+    if X_td is None:
+        print("Using synthetic data for Threat Detection.")
+        X_td, y_td = generate_threat_samples(n=1200)
+
     td_model = ThreatDetectionModel()
     td_model.train(X_td, y_td, validation_split=0.2, optimize_hyperparameters=True, cross_validate=True)
-
-    # Resolve storage directory under repo root to guarantee visibility
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    storage_dir = os.path.join(repo_root, "models", "saved")
-    os.makedirs(storage_dir, exist_ok=True)
-    # Write a marker file to verify write permissions
-    try:
-        with open(os.path.join(storage_dir, "WRITE_TEST.txt"), "w", encoding="utf-8") as mf:
-            mf.write("ok")
-    except Exception as e:
-        print(f"Failed to write marker in {storage_dir}: {e}")
 
     td_path = os.path.join(storage_dir, "threat_detection_latest.joblib")
     td_model.save(td_path)
     td_saved = os.path.exists(td_path)
 
     # Vulnerability Assessment
-    X_va, y_va = generate_vulnerability_samples(n=300)
+    print("Training Vulnerability Assessment Model...")
+    X_va, y_va = None, None
+    if data_dir:
+        X_va, y_va = load_data_from_dir(os.path.join(data_dir, "vulnerability_assessment"), "vulnerability_assessment")
+        
+    if X_va is None:
+        print("Using synthetic data for Vulnerability Assessment.")
+        X_va, y_va = generate_vulnerability_samples(n=300)
+
     va_model = VulnerabilityAssessmentModel()
-    va_train_results = va_model.train(X_va, y_va, validation_split=0.2, optimize_hyperparameters=True)
+    va_model.train(X_va, y_va, validation_split=0.2, optimize_hyperparameters=True)
+    
     # Ensure a primary trained model is assigned for saving
     if hasattr(va_model, 'models') and 'primary' in getattr(va_model, 'models', {}):
         va_model.model = va_model.models['primary']
@@ -215,16 +299,76 @@ def train_and_save_models():
     try:
         va_model.save(va_path)
     except Exception as e:
-        # Surface the error for visibility while continuing to report
         print(f"Failed to save vulnerability model: {e}")
     va_saved = os.path.exists(va_path)
+
+    # UEBA
+    print("Training UEBA Model...")
+    # Import here to avoid circular imports if not needed
+    try:
+        from app.ueba.ueba_graph_detector_prod import get_ueba_detector, UserActivity
+        from datetime import datetime
+        
+        ueba_detector = get_ueba_detector()
+        
+        # Load data
+        ueba_data = []
+        if data_dir:
+            # Check for ueba folder
+            ueba_files = glob.glob(os.path.join(data_dir, "ueba", "*.jsonl"))
+            for fpath in ueba_files:
+                try:
+                    with open(fpath, 'r') as f:
+                        for line in f:
+                            ueba_data.append(json.loads(line))
+                except Exception as e:
+                    print(f"Error reading UEBA file {fpath}: {e}")
+        
+        if not ueba_data:
+            print("No UEBA data found, skipping UEBA training.")
+        else:
+            print(f"Loaded {len(ueba_data)} UEBA events.")
+            # Populate buffer
+            for item in ueba_data:
+                activity = UserActivity(
+                    user_id=item.get("entity_id", "unknown"),
+                    activity_type=item.get("event_type", "unknown"),
+                    timestamp=datetime.fromisoformat(item.get("timestamp", datetime.now().isoformat()).replace("Z", "+00:00")),
+                    source_host=item.get("source_ip", ""),
+                    target_resource=item.get("resource", ""),
+                    details=item
+                )
+                # We access the buffer directly for batch loading in this script context
+                ueba_detector.activity_buffer.append((activity.user_id, activity))
+            
+            # Train
+            # Since train_models is async, we need to run it. But this script is sync.
+            # The train_models method in UEBA is async defined but doesn't use await inside except for lock?
+            # Actually it uses 'with self.lock' which is a threading lock, so it's synchronous safe.
+            # But it is defined as 'async def'. We need to run it.
+            import asyncio
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If we are in a running loop (unlikely in this script), create task
+                # But this script is main.
+                pass
+            
+            # Simple wrapper to run async method
+            async def run_ueba_train():
+                return await ueba_detector.train_models(min_samples=10)
+            
+            ueba_result = asyncio.run(run_ueba_train())
+            print(f"UEBA Training Result: {ueba_result}")
+            
+    except ImportError as e:
+        print(f"Could not import UEBA modules: {e}")
+    except Exception as e:
+        print(f"UEBA training failed: {e}")
 
     duration = time.time() - start
     result = {
         "threat_detection_model_path": os.path.abspath(td_path),
         "vulnerability_assessment_model_path": os.path.abspath(va_path),
-        "training_time_seconds": duration,
-        "threat_detection_saved": td_saved,
         "vulnerability_assessment_saved": va_saved,
         "samples": {"threat_detection": int(X_td.shape[0]), "vulnerability_assessment": int(X_va.shape[0])},
     }
@@ -235,13 +379,17 @@ def train_and_save_models():
         with open(results_path, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2)
     except Exception:
-        # Best-effort; continue even if writing fails
         pass
 
     return result
 
 
 if __name__ == "__main__":
-    results = train_and_save_models()
+    parser = argparse.ArgumentParser(description="Train ML Models")
+    parser.add_argument("--data-dir", type=str, help="Directory containing training data")
+    parser.add_argument("--output-dir", type=str, help="Directory to save trained models")
+    args = parser.parse_args()
+
+    results = train_and_save_models(data_dir=args.data_dir, output_dir=args.output_dir)
     print("Training completed:")
     print(results)

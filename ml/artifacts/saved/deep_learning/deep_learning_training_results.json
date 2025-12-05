@@ -1,0 +1,40 @@
+{
+  "trained_at": "2025-12-05T08:58:18.297426",
+  "models": {
+    "cnn": {
+      "model_type": "CNN Traffic Classifier",
+      "model_path": "/app/app/scripts/../../artifacts/saved/deep_learning/cnn_traffic_classifier.h5",
+      "samples": 1000,
+      "input_shape": [
+        100,
+        1
+      ]
+    },
+    "lstm": {
+      "model_type": "LSTM Sequence Detector",
+      "model_path": "/app/app/scripts/../../artifacts/saved/deep_learning/lstm_sequence_detector.h5",
+      "samples": 800,
+      "input_shape": [
+        50,
+        10
+      ]
+    },
+    "autoencoder": {
+      "model_type": "Autoencoder Anomaly Detector",
+      "model_path": "/app/app/scripts/../../artifacts/saved/deep_learning/autoencoder_anomaly_detector.h5",
+      "samples": 1000,
+      "input_shape": [
+        50
+      ],
+      "encoding_dim": 16
+    },
+    "transformer": {
+      "model_type": "Transformer Log Understanding",
+      "model_path": "/app/app/scripts/../../artifacts/saved/deep_learning/transformer_log_understanding.h5",
+      "samples": 500,
+      "vocab_size": 1000,
+      "sequence_length": 20
+    }
+  },
+  "training_time_seconds": 261.9585471153259
+}

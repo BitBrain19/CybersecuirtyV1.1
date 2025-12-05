@@ -1,0 +1,16 @@
+{
+  "model_path": "/app/artifacts/saved/threat_classifier_latest.pkl",
+  "training_time_seconds": 3.2951905727386475,
+  "metrics": {
+    "accuracy": 0.9716312056737588,
+    "precision": 0.9732999582811849,
+    "recall": 0.9716312056737588,
+    "f1": 0.97142972275951
+  },
+  "samples": {
+    "total": 1000,
+    "threats": 701,
+    "benign": 299
+  },
+  "trained_at": "2025-12-05T08:58:18.273548"
+}

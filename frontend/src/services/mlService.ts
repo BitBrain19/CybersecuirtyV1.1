@@ -328,6 +328,22 @@ const mlService = {
   },
 
   /**
+   * Assess Compliance
+   */
+  assessCompliance: async (framework: string = "NIST"): Promise<any> => {
+    try {
+      const response = await api.post("/ml/predict", {
+        model_name: "compliance",
+        features: { framework }
+      });
+      return response.data.prediction;
+    } catch (error) {
+      console.error("Error assessing compliance:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Get EDR Alerts
    */
   getEDRAlerts: async (endpointId?: string): Promise<any[]> => {

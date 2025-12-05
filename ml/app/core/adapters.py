@@ -81,7 +81,40 @@ class AttackPathAdapter(BaseAdapter):
     """Adapter for Attack Path Predictor."""
     
     async def predict(self, features: Dict[str, Any]) -> Any:
-        # Expects source and target nodes
+        operation = features.get("operation")
+        
+        if operation == "get_graph":
+            # Return all discovered attack paths
+            # In a real scenario, this might call a specific method on the model
+            # For now, we'll return a mock list if the model doesn't support listing all
+            if hasattr(self.model, "get_all_paths"):
+                result = await self.model.get_all_paths()
+            else:
+                # Fallback to empty list or mock for verification
+                return {
+                    "paths_found": 0,
+                    "paths": []
+                }
+
+            return {
+                "paths_found": len(result),
+                "paths": [
+                    {
+                        "id": getattr(path, "id", f"path_{i}"),
+                        "name": getattr(path, "name", f"Attack Path {i+1}"),
+                        "source": getattr(path, "source", "unknown"),
+                        "target": getattr(path, "target", "unknown"),
+                        "steps": [n.id for n in path.nodes],
+                        "risk_score": path.risk_score,
+                        "probability": path.probability,
+                        "status": "active",
+                        "discovered_at": datetime.now().isoformat()
+                    }
+                    for i, path in enumerate(result)
+                ]
+            }
+
+        # Expects source and target nodes for specific path finding
         source = features.get("source_node")
         target = features.get("target_node")
         
@@ -200,22 +233,57 @@ class SOAREngineAdapter(BaseAdapter):
     async def predict(self, features: Dict[str, Any]) -> Any:
         from app.soar_engine.soar_orchestrator_prod import IncidentContext
         
-        # Map features to IncidentContext fields
-        incident = IncidentContext(
-            incident_id=features.get("incident_id", ""),
-            severity=features.get("severity", "medium"),
-            incident_type=features.get("alert_type", "security_incident"),
-            affected_hosts=features.get("assets", [])
-        )
+        operation = features.get("operation", "process_incident")
         
-        result = await self.model.process_incident(incident)
-        
-        return {
-            "playbook_actions": [a.action_type.value for a in result.suggested_actions],
-            "executed_actions": [a.action_type.value for a in result.executed_actions],
-            "triage_level": result.triage_level.value,
-            "root_cause": result.root_cause_hypothesis
-        }
+        if operation == "list_playbooks":
+            playbooks = self.model.playbook_library.get_all_enabled()
+            return {
+                "playbooks": [
+                    {
+                        "id": pb.playbook_id, # Note: ID might be generated on fly in current impl, might need stable IDs
+                        "name": pb.name,
+                        "description": pb.description,
+                        "trigger_type": pb.trigger_type,
+                        "actions": [a.action_type.value for a in pb.actions]
+                    }
+                    for pb in playbooks
+                ]
+            }
+            
+        elif operation == "execute_playbook":
+            # Direct execution of a specific playbook logic
+            # For now, we map this to process_incident with specific context
+            incident = IncidentContext(
+                incident_id=features.get("incident_id", ""),
+                severity=features.get("severity", "medium"),
+                incident_type=features.get("alert_type", "security_incident"),
+                affected_hosts=features.get("assets", [])
+            )
+            result = await self.model.process_incident(incident)
+            return {
+                "playbook_actions": [a.action_type.value for a in result.suggested_actions],
+                "executed_actions": [a.action_type.value for a in result.executed_actions],
+                "triage_level": result.triage_level.value,
+                "root_cause": result.root_cause_hypothesis
+            }
+            
+        else:
+            # Default behavior: process incident
+            incident = IncidentContext(
+                incident_id=features.get("incident_id", ""),
+                severity=features.get("severity", "medium"),
+                incident_type=features.get("alert_type", "security_incident"),
+                affected_hosts=features.get("assets", [])
+            )
+            
+            result = await self.model.process_incident(incident)
+            
+            return {
+                "playbook_actions": [a.action_type.value for a in result.suggested_actions],
+                "executed_actions": [a.action_type.value for a in result.executed_actions],
+                "triage_level": result.triage_level.value,
+                "root_cause": result.root_cause_hypothesis
+            }
 
 class VulnerabilityAssessmentAdapter(BaseAdapter):
     """Adapter for existing Vulnerability Assessment Model."""
@@ -227,6 +295,20 @@ class VulnerabilityAssessmentAdapter(BaseAdapter):
             "severity": severity,
             "risk_score": score,
             "confidence": score / 10.0
+        }
+
+class ComplianceAdapter(BaseAdapter):
+    """Adapter for Compliance Assessment Model."""
+    
+    async def predict(self, features: Dict[str, Any]) -> Any:
+        result = await self.model.assess_compliance(features)
+        
+        return {
+            "score": result.score,
+            "status": result.status,
+            "issues": result.issues,
+            "compliant": result.compliant,
+            "framework": result.framework
         }
 
 # Factory map
@@ -241,4 +323,5 @@ ADAPTER_MAP = {
     ModelType.XDR_CORRELATION: XDRCorrelationAdapter,
     ModelType.SOAR_ENGINE: SOAREngineAdapter,
     ModelType.VULNERABILITY_ASSESSMENT: VulnerabilityAssessmentAdapter,
+    ModelType.COMPLIANCE: ComplianceAdapter,
 }

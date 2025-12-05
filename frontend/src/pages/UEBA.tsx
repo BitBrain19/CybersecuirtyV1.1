@@ -38,19 +38,54 @@ const UEBA: React.FC = () => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        // Using mlService to fetch anomalies, then deriving user risk from them
-        // or assuming the backend supports a 'list_users' op on the UEBA model
+        // Fetch anomalies from ML service
         const anomalies = await mlService.getUEBAAnomalies();
         
-        // Mocking user aggregation from anomalies for now as backend 'list_users' might not exist
-        // In a real app, we'd add a specific 'list_users' op to the UEBA adapter
-        const mockUsers: UserRiskData[] = [
-          { user_id: "1", username: "admin", risk_score: 85, risk_level: "critical", anomalies_count: 3, last_activity: "2 mins ago", behavior_baseline: "Admin Task" },
-          { user_id: "2", username: "jdoe", risk_score: 45, risk_level: "medium", anomalies_count: 1, last_activity: "1 hour ago", behavior_baseline: "Data Entry" },
-          { user_id: "3", username: "service_account", risk_score: 10, risk_level: "low", anomalies_count: 0, last_activity: "5 mins ago", behavior_baseline: "API Calls" }
-        ];
+        // Derive users from anomalies
+        const userMap = new Map<string, UserRiskData>();
         
-        setUsers(mockUsers);
+        anomalies.forEach((anomaly: any) => {
+          const userId = anomaly.user_id || 'unknown';
+          const username = anomaly.username || 'unknown';
+          
+          if (!userMap.has(userId)) {
+            userMap.set(userId, {
+              user_id: userId,
+              username: username,
+              risk_score: 0,
+              risk_level: 'low',
+              anomalies_count: 0,
+              last_activity: anomaly.timestamp, // approximate
+              behavior_baseline: 'Standard User'
+            });
+          }
+          
+          const user = userMap.get(userId)!;
+          user.anomalies_count += 1;
+          // Simple risk accumulation
+          user.risk_score = Math.min(100, user.risk_score + (anomaly.severity === 'critical' ? 30 : anomaly.severity === 'high' ? 20 : 10));
+          
+          // Update risk level
+          if (user.risk_score > 80) user.risk_level = 'critical';
+          else if (user.risk_score > 60) user.risk_level = 'high';
+          else if (user.risk_score > 40) user.risk_level = 'medium';
+          
+          // Update last activity if newer
+          if (new Date(anomaly.timestamp) > new Date(user.last_activity)) {
+            user.last_activity = anomaly.timestamp;
+          }
+        });
+        
+        const derivedUsers = Array.from(userMap.values());
+        
+        if (derivedUsers.length === 0) {
+           // Fallback for demo if no anomalies found yet
+           // This ensures the UI isn't empty during initial setup
+           setUsers([]); 
+        } else {
+           setUsers(derivedUsers);
+        }
+        
         success("User risk data loaded");
       } catch (err) {
         error(err instanceof Error ? err.message : "Failed to load user data");

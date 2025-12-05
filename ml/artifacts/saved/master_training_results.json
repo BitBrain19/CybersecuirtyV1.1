@@ -1,0 +1,83 @@
+{
+  "started_at": "2025-12-05T08:54:36.595203",
+  "models": {
+    "core": {
+      "threat_detection": "/app/artifacts/saved/threat_detection_latest.joblib",
+      "vulnerability_assessment": "/app/artifacts/saved/vulnerability_assessment_latest.joblib",
+      "status": "success"
+    },
+    "malware_detection": {
+      "model_path": "/app/artifacts/saved/malware_detection_latest.pkl",
+      "samples": {
+        "total": 500,
+        "malware": 153,
+        "benign": 347
+      },
+      "status": "success"
+    },
+    "threat_classification": {
+      "model_path": "/app/artifacts/saved/threat_classifier_latest.pkl",
+      "metrics": {
+        "accuracy": 0.9716312056737588,
+        "precision": 0.9732999582811849,
+        "recall": 0.9716312056737588,
+        "f1": 0.97142972275951
+      },
+      "samples": {
+        "total": 1000,
+        "threats": 701,
+        "benign": 299
+      },
+      "status": "success"
+    },
+    "deep_learning": {
+      "models": {
+        "cnn": {
+          "model_type": "CNN Traffic Classifier",
+          "model_path": "/app/app/scripts/../../artifacts/saved/deep_learning/cnn_traffic_classifier.h5",
+          "samples": 1000,
+          "input_shape": [
+            100,
+            1
+          ]
+        },
+        "lstm": {
+          "model_type": "LSTM Sequence Detector",
+          "model_path": "/app/app/scripts/../../artifacts/saved/deep_learning/lstm_sequence_detector.h5",
+          "samples": 800,
+          "input_shape": [
+            50,
+            10
+          ]
+        },
+        "autoencoder": {
+          "model_type": "Autoencoder Anomaly Detector",
+          "model_path": "/app/app/scripts/../../artifacts/saved/deep_learning/autoencoder_anomaly_detector.h5",
+          "samples": 1000,
+          "input_shape": [
+            50
+          ],
+          "encoding_dim": 16
+        },
+        "transformer": {
+          "model_type": "Transformer Log Understanding",
+          "model_path": "/app/app/scripts/../../artifacts/saved/deep_learning/transformer_log_understanding.h5",
+          "samples": 500,
+          "vocab_size": 1000,
+          "sequence_length": 20
+        }
+      },
+      "training_time": 261.9585471153259,
+      "status": "success"
+    }
+  },
+  "errors": [],
+  "completed_at": "2025-12-05T09:02:40.248230",
+  "total_training_time_seconds": 483.6619529724121,
+  "summary": {
+    "total_models": 4,
+    "successful": 4,
+    "failed": 0,
+    "skipped": 0
+  }
+}

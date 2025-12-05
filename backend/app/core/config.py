@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     
     # Redis
     REDIS_URL: str = "redis://redis:6379/0"
+
+    # ML Service
+    ML_SERVICE_URL: str = "http://ml_service:8001"
     
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
