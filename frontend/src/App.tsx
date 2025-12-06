@@ -2,7 +2,6 @@ import { Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 // Using Sonner Toaster instead of react-toastify
 import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "@/components/ThemeProvider";
 
 // Layouts
 import MainLayout from "./components/layouts/MainLayout";
@@ -25,7 +24,7 @@ import AuthGuard from "./components/auth/AuthGuard";
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="cybergard-theme">
+    <>
       <Suspense
         fallback={
           <div className="flex items-center justify-center h-screen">
@@ -58,7 +57,7 @@ function App() {
         </Routes>
       </Suspense>
       <Toaster />
-    </ThemeProvider>
+    </>
   );
 }
 

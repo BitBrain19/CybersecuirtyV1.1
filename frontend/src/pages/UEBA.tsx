@@ -3,7 +3,6 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 import DataTable from "@/components/DataTable";
 import { useToast } from "@/hooks/useToast";
-import mlService from "@/services/mlService";
 
 interface UserRiskData {
   user_id: string;
@@ -38,54 +37,19 @@ const UEBA: React.FC = () => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        // Fetch anomalies from ML service
-        const anomalies = await mlService.getUEBAAnomalies();
-        
-        // Derive users from anomalies
-        const userMap = new Map<string, UserRiskData>();
-        
-        anomalies.forEach((anomaly: any) => {
-          const userId = anomaly.user_id || 'unknown';
-          const username = anomaly.username || 'unknown';
-          
-          if (!userMap.has(userId)) {
-            userMap.set(userId, {
-              user_id: userId,
-              username: username,
-              risk_score: 0,
-              risk_level: 'low',
-              anomalies_count: 0,
-              last_activity: anomaly.timestamp, // approximate
-              behavior_baseline: 'Standard User'
-            });
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/ueba/users`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           }
-          
-          const user = userMap.get(userId)!;
-          user.anomalies_count += 1;
-          // Simple risk accumulation
-          user.risk_score = Math.min(100, user.risk_score + (anomaly.severity === 'critical' ? 30 : anomaly.severity === 'high' ? 20 : 10));
-          
-          // Update risk level
-          if (user.risk_score > 80) user.risk_level = 'critical';
-          else if (user.risk_score > 60) user.risk_level = 'high';
-          else if (user.risk_score > 40) user.risk_level = 'medium';
-          
-          // Update last activity if newer
-          if (new Date(anomaly.timestamp) > new Date(user.last_activity)) {
-            user.last_activity = anomaly.timestamp;
-          }
-        });
-        
-        const derivedUsers = Array.from(userMap.values());
-        
-        if (derivedUsers.length === 0) {
-           // Fallback for demo if no anomalies found yet
-           // This ensures the UI isn't empty during initial setup
-           setUsers([]); 
-        } else {
-           setUsers(derivedUsers);
-        }
-        
+        );
+
+        if (!response.ok) throw new Error("Failed to fetch user data");
+
+        const data = await response.json();
+        setUsers(data.users || []);
         success("User risk data loaded");
       } catch (err) {
         error(err instanceof Error ? err.message : "Failed to load user data");
@@ -106,11 +70,21 @@ const UEBA: React.FC = () => {
       }
 
       try {
-        // Fetch real anomalies from backend
-        const allAnomalies = await mlService.getUEBAAnomalies();
-        // Filter for selected user (mocking the filter as backend returns all)
-        const userAnomalies = allAnomalies.filter((a: any) => a.username === selectedUser.username);
-        setAnomalies(userAnomalies);
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/ueba/users/${
+            selectedUser.user_id
+          }/anomalies`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        if (!response.ok) throw new Error("Failed to fetch anomalies");
+
+        const data = await response.json();
+        setAnomalies(data.anomalies || []);
       } catch (err) {
         error(err instanceof Error ? err.message : "Failed to load anomalies");
       }

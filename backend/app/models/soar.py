@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 import enum
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Enum
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -48,7 +48,7 @@ class SOARExecution(Base):
     __tablename__ = "soar_executions"
 
     id = Column(Integer, primary_key=True, index=True)
-    playbook_id = Column(Integer, ForeignKey("soar_playbooks.id"), nullable=False, index=True)
+    playbook_id = Column(Integer, nullable=False, index=True)
     status = Column(Enum(ExecutionStatus), default=ExecutionStatus.pending)
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)

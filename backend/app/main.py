@@ -47,6 +47,25 @@ async def startup_event():
     # Initialize database with sample data
     from app.db.init_db import init_db
     await init_db()
+    
+    # Start Log Collection Pipeline
+    try:
+        from app.api.api_v1.endpoints.logs import pipeline
+        pipeline.start()
+        print("Log Collection Pipeline started successfully")
+    except Exception as e:
+        print(f"Failed to start Log Collection Pipeline: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Stop Log Collection Pipeline
+    try:
+        from app.api.api_v1.endpoints.logs import pipeline
+        pipeline.stop()
+        print("Log Collection Pipeline stopped successfully")
+    except Exception as e:
+        print(f"Failed to stop Log Collection Pipeline: {e}")
 
 
 @app.get("/health")

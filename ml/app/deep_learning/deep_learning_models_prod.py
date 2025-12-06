@@ -344,12 +344,12 @@ class AutoencoderAnomalyDetector:
 class TransformerLogUnderstanding:
     """Transformer-based model for log sequence understanding and anomaly detection"""
     
-    def __init__(self, vocab_size: int = 5000, sequence_length: int = 100, config: DeepLearningConfig = None):
+    def __init__(self, config: DeepLearningConfig = None):
         self.config = config or DeepLearningConfig()
         self.model = None
         self.scaler = StandardScaler()
-        self.vocab_size = vocab_size
-        self.sequence_length = sequence_length
+        self.vocab_size = 5000  # Max unique tokens
+        self.sequence_length = 100
         self._lock = threading.RLock()
         
     def build_model(self):

@@ -227,16 +227,9 @@ class ThreatClassifierModel:
         """Train the classifier"""
         logger.info(f"Training threat classifier on {len(events)} events")
         
-        # Filter only threat events (those with a threat_category)
-        threat_events = [e for e in events if e.threat_category]
-        
-        if len(threat_events) < 10:
-            logger.warning(f"Not enough threat events for training: {len(threat_events)}")
-            return self.metrics
-        
-        # Extract features and labels from threat events only
-        X = np.array([self.feature_extractor.extract_features(e) for e in threat_events])
-        y = np.array([e.threat_category.value for e in threat_events])
+        # Extract features and labels
+        X = np.array([self.feature_extractor.extract_features(e) for e in events])
+        y = np.array([e.threat_category.value for e in events if e.threat_category])
         
         if len(np.unique(y)) < 2:
             logger.warning("Not enough threat categories for training")
@@ -270,7 +263,7 @@ class ThreatClassifierModel:
         self.metrics.precision = precision_score(y_test, y_pred, average='weighted', zero_division=0)
         self.metrics.recall = recall_score(y_test, y_pred, average='weighted', zero_division=0)
         self.metrics.f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
-        self.metrics.dataset_size = len(threat_events)
+        self.metrics.dataset_size = len(events)
         
         self.trained = True
         logger.info(f"Training complete - Accuracy: {self.metrics.accuracy:.2%}")

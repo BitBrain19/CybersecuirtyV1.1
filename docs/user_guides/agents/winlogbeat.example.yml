@@ -1,0 +1,35 @@
+##############################
+# Winlogbeat example config
+# Path: docs/user_guides/agents/winlogbeat.example.yml
+# Purpose: Collect Windows Event Logs and forward to Logstash (recommended)
+##############################
+winlogbeat.event_logs:
+  - name: Application
+  - name: System
+  - name: Security
+    ignore_older: 72h
+
+# Add fields to identify this device in CyberGard
+fields:
+  env: production
+  product: cybergard
+  device_role: workstation
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+
+# Output to Logstash for parsing/transformation
+output.logstash:
+  hosts: ["logstash.example.com:5044"]
+  ssl:
+    enabled: true
+    certificate_authorities: ["C:/ProgramData/Elastic/Agent/ca.crt"]
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: C:\ProgramData\winlogbeat\Logs
+  name: winlogbeat
+  keepfiles: 7
+  permissions: 0644
